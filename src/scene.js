@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
 import { MODEL_BUILDERS, CYAN, PINK, fresnelSphere } from './models.js';
 import { MODEL_BUILDERS_2 } from './models2.js';
+import { Q, onQuality } from './quality.js';
 
 const BUILDERS = { ...MODEL_BUILDERS, ...MODEL_BUILDERS_2 };
 export const registerBuilder = (id, fn) => (BUILDERS[id] = fn);
@@ -46,7 +47,8 @@ export function instantiate(def, withHotspots = true) {
 
 export function createScene(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Q.pixelRatio);
+  onQuality((q) => { renderer.setPixelRatio(q.pixelRatio); });
   renderer.setClearColor(0x000000, 0);
 
   const scene = new THREE.Scene();

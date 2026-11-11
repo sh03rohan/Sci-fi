@@ -1,6 +1,7 @@
 // Visual effects: bloom (CSS drop-shadow on the GL canvas), film grain + vignette,
 // random hologram glitches, text scramble on panels, and colour themes.
 import * as THREE from 'three';
+import { Q, onQuality } from './quality.js';
 
 export const THEMES = {
   cyan:  { name: 'CYAN',  primary: '#00e5ff', accent: '#ff3d71', tert: '#ffb300', green: '#7cff6b', bg: '#05080c' },
@@ -77,9 +78,11 @@ export function createFX({ scene, library, hud, sound }) {
 
   /* ---------- fx toggle ---------- */
   function setFX(on) {
-    state.fx = on; document.body.classList.toggle('fx', on); grain.classList.toggle('hidden', !on);
-    if (on) schedule(); else clearTimeout(glitchTimer);
+    state.fx = on; applyQ(); if (on) schedule(); else clearTimeout(glitchTimer);
   }
+  // bloom (CSS drop-shadow) and grain are the costliest effects: only on when quality allows
+  function applyQ() { document.body.classList.toggle('fx', state.fx && Q.bloom); grain.classList.toggle('hidden', !(state.fx && Q.grain)); }
+  onQuality(applyQ);
   // re-theme freshly mounted models
   scene.onModelChange(() => { if (state.theme !== 'cyan') applyTheme(state.theme); });
   setFX(true);

@@ -12,6 +12,7 @@ export async function createOcclusion({ video, canvas, toScreen, onLog = () => {
   const maskCanvas = document.createElement('canvas'); const mctx = maskCanvas.getContext('2d');
   let seg = null, enabled = false, frame = 0, lastT = -1, maskReady = false, imgData = null;
   let w = 0, h = 0;
+  const small = document.createElement('canvas'); const sctx = small.getContext('2d');
 
   function resize() { const dpr = Math.min(window.devicePixelRatio, 2); canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
   window.addEventListener('resize', resize); resize();
@@ -32,7 +33,10 @@ export async function createOcclusion({ video, canvas, toScreen, onLog = () => {
     if (!seg || video.readyState < 2 || video.currentTime === lastT) return;
     lastT = video.currentTime; frame++;
     if (frame % 2) return;
-    const res = seg.segmentForVideo(video, now);
+    const tw = 256, th = Math.max(1, Math.round(tw * video.videoHeight / video.videoWidth));
+    if (small.width !== tw || small.height !== th) { small.width = tw; small.height = th; }
+    sctx.drawImage(video, 0, 0, tw, th);
+    const res = seg.segmentForVideo(small, now);
     const m = res.confidenceMasks?.[0]; if (!m) return;
     if (w !== m.width || h !== m.height) { w = m.width; h = m.height; maskCanvas.width = w; maskCanvas.height = h; imgData = mctx.createImageData(w, h); }
     const f = m.getAsFloat32Array(), d = imgData.data;

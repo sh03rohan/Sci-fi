@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { instantiate } from './scene.js';
+import { Q } from './quality.js';
 
 // Left-hand model library: DOM slots with live 3D minis rendered via scissor viewports.
 export function createLibrary({ scene, container, defs, sound, targets }) {
@@ -32,19 +33,26 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
 
   function step(dir) { const n = slots.length; select((((selected < 0 ? 0 : selected) + dir) % n + n) % n); }
 
+  // Layout rects are cached (getBoundingClientRect every frame forces layout).
+  let rects = [], rectsAt = 0, cursor = 0;
+  function refreshRects() { rects = slots.map((s) => s.view.getBoundingClientRect()); rectsAt = performance.now(); }
+  window.addEventListener('resize', () => (rectsAt = 0));
   function render(dt) {
-    const r = scene.renderer, H = window.innerHeight, dpr = r.getPixelRatio();
+    if (performance.now() - rectsAt > 1500 || rects.length !== slots.length) refreshRects();
+    const r = scene.renderer, H = window.innerHeight;
+    // every mini keeps spinning in state, but only a few are drawn per frame (round-robin);
+    // selected/hovered ones are always redrawn so they feel live.
+    const budget = Q.minisPerFrame, toDraw = new Set();
+    for (let k = 0; k < budget && slots.length; k++) { toDraw.add(cursor % slots.length); cursor++; }
+    slots.forEach((s, i) => { if (i === selected || s.el.classList.contains('hover')) toDraw.add(i); });
     r.setScissorTest(true);
-    for (let i = 0; i < slots.length; i++) {
-      const s = slots[i], rect = s.view.getBoundingClientRect();
-      if (rect.width < 4) continue;
-      s.spin += dt * (i === selected || s.el.classList.contains('hover') ? 1.6 : 0.5);
-      s.mini.group.rotation.y = s.spin; s.mini.update(dt);
-      const x = rect.left * dpr, y = (H - rect.bottom) * dpr, w = rect.width * dpr, h = rect.height * dpr;
-      // setViewport/setScissor take CSS px when the renderer manages pixel ratio.
+    for (const i of toDraw) {
+      const s = slots[i], rect = rects[i]; if (!rect || rect.width < 4) continue;
+      s.spin += dt * (i === selected || s.el.classList.contains('hover') ? 1.6 : 0.5) * (slots.length / Math.max(1, budget));
+      s.mini.group.rotation.y = s.spin; s.mini.update(dt * (slots.length / Math.max(1, budget)));
       r.setViewport(rect.left, H - rect.bottom, rect.width, rect.height);
       r.setScissor(rect.left, H - rect.bottom, rect.width, rect.height);
-      s.cam.aspect = w / h; s.cam.updateProjectionMatrix();
+      s.cam.aspect = rect.width / rect.height; s.cam.updateProjectionMatrix();
       r.render(s.sc, s.cam);
     }
     r.setScissorTest(false);

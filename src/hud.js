@@ -1,6 +1,7 @@
 import { FaceLandmarker } from '@mediapipe/tasks-vision';
 import { HAND_CONNECTIONS } from './gestures.js';
 import { clamp, dist } from './util.js';
+import { Q } from './quality.js';
 
 const P = { cyan: '#00e5ff', green: '#7cff6b', pink: '#ff3d71', amber: '#ffb300' };
 const WHITE = '#ffffff';
@@ -21,7 +22,7 @@ export function createHUD(canvas) {
     gesture: $('g-name'), rot: $('g-rot'), zoom: $('g-zoom'), model: $('g-model'),
     yaw: $('b-yaw'), pitch: $('b-pitch'), eyeL: $('b-eyel'), eyeR: $('b-eyer'), mouth: $('b-mouth'), hands: $('b-hands'), blink: $('b-blink'),
   };
-  function resize() { const dpr = Math.min(window.devicePixelRatio, 2); canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  function resize() { const dpr = Q.overlayDpr; canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
   window.addEventListener('resize', resize); resize();
 
   let fpsAcc = 0, fpsN = 0, fpsLast = performance.now();
@@ -32,9 +33,19 @@ export function createHUD(canvas) {
   function alert(msg) { alertEl.querySelector('span').textContent = msg; alertEl.classList.remove('hidden'); alertEl.classList.remove('go'); void alertEl.offsetWidth; alertEl.classList.add('go'); setTimeout(() => alertEl.classList.add('hidden'), 2200); }
   let t = 0;
 
-  const setStatus = (key, on) => { el[key].classList.toggle('on', on); el[key].textContent = el[key].textContent.replace(/[○●]/, on ? '●' : '○'); };
+  const lastText = new Map();
+  const setText = (node, v) => { if (!node) return; if (lastText.get(node) !== v) { lastText.set(node, v); node.textContent = v; } };
+  const lastW = new Map();
+  const setWidth = (node, pct) => { const r = Math.round(pct / 3) * 3; if (lastW.get(node) !== r) { lastW.set(node, r); node.style.width = `${r}%`; } };
+  const setStatus = (key, on) => { if (el[key].dataset.on === String(on)) return; el[key].dataset.on = String(on); el[key].classList.toggle('on', on); el[key].textContent = el[key].textContent.replace(/[○●]/, on ? '●' : '○'); };
   const text = (s, x, y, col, size = 10, align = 'left') => { ctx.font = `${size}px "JetBrains Mono", Menlo, monospace`; ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(s, x, y); };
-  function glowStroke(col, w = 1.5, blur = 8, alpha = 0.9) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.shadowColor = col; ctx.shadowBlur = blur; ctx.globalAlpha = alpha; }
+  // Glow without shadowBlur (which is extremely slow): callers stroke twice via glowPath.
+  function glowStroke(col, w = 1.5, blur = 8, alpha = 0.9) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.globalAlpha = alpha; ctx.shadowBlur = 0; }
+  // Stroke the current path as a soft halo + crisp core.
+  function strokeGlow(col, w = 1.5, alpha = 0.9) {
+    ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = alpha * 0.22; ctx.lineWidth = w + 5; ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = col; ctx.globalAlpha = alpha; ctx.lineWidth = w; ctx.stroke();
+  }
   function callout(x, y, label, col, dirX = 1, len = 48, dy = -26) {
     // small leader line from a feature point to a label
     ctx.save(); glowStroke(col, 1, 6, 0.9);
@@ -47,7 +58,7 @@ export function createHUD(canvas) {
     ctx.save(); glowStroke(col, lw, 6, 0.9); ctx.beginPath();
     ctx.moveTo(x, y + L); ctx.lineTo(x, y); ctx.lineTo(x + L, y); ctx.moveTo(x + w - L, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + L);
     ctx.moveTo(x + w, y + h - L); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w - L, y + h); ctx.moveTo(x + L, y + h); ctx.lineTo(x, y + h); ctx.lineTo(x, y + h - L);
-    ctx.stroke(); ctx.restore();
+    strokeGlow(col, lw, 0.9); ctx.restore();
   }
 
   /* ------------ trails & sparks ------------ */
@@ -68,14 +79,14 @@ export function createHUD(canvas) {
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.9; s.vy = s.vy * 0.9 + 300 * dt; s.t -= dt * 1.8; if (s.t <= 0) sparks.splice(i, 1); }
   }
   function drawTrails() {
-    if (!trailsOn) return;
+    if (!trailsOn || !Q.trails) return;
     for (const tr of trails) {
       if (tr.length < 2) continue;
-      ctx.save(); ctx.lineCap = 'round'; ctx.shadowColor = P.cyan; ctx.shadowBlur = 10;
+      ctx.save(); ctx.lineCap = 'round';
       for (let i = 1; i < tr.length; i++) { ctx.strokeStyle = P.cyan; ctx.globalAlpha = tr[i].t * 0.7; ctx.lineWidth = 1 + tr[i].t * 3; ctx.beginPath(); ctx.moveTo(tr[i - 1].x, tr[i - 1].y); ctx.lineTo(tr[i].x, tr[i].y); ctx.stroke(); }
       ctx.restore();
     }
-    if (sparks.length) { ctx.save(); for (const s of sparks) { ctx.globalAlpha = s.t; ctx.fillStyle = s.col; ctx.shadowColor = s.col; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(s.x, s.y, 1.5 + s.t * 2, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+    if (sparks.length) { ctx.save(); for (const s of sparks) { ctx.globalAlpha = s.t; ctx.fillStyle = s.col; ctx.beginPath(); ctx.arc(s.x, s.y, 1.5 + s.t * 2, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
   }
 
   /* ------------ HAND ------------ */
@@ -89,7 +100,7 @@ export function createHUD(canvas) {
     if (owner > 0 && (h.type === 'none' || h.type === 'point' || h.type === 'peace')) col = P.pink;
     const K = h.points;
     ctx.save(); glowStroke(col, 1.6, 10, 0.85);
-    ctx.beginPath(); for (const [a, b] of HAND_CONNECTIONS) { ctx.moveTo(K[a].x, K[a].y); ctx.lineTo(K[b].x, K[b].y); } ctx.stroke();
+    ctx.beginPath(); for (const [a, b] of HAND_CONNECTIONS) { ctx.moveTo(K[a].x, K[a].y); ctx.lineTo(K[b].x, K[b].y); } strokeGlow(col, 1.6, 0.85);
     // palm web
     ctx.globalAlpha = 0.25; ctx.beginPath(); ctx.moveTo(K[0].x, K[0].y); for (const i of [5, 9, 13, 17]) ctx.lineTo(K[i].x, K[i].y); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
     ctx.globalAlpha = 0.9; ctx.shadowBlur = 6;
@@ -118,15 +129,17 @@ export function createHUD(canvas) {
   /* ------------ FACE ------------ */
   function drawFace(face, toScreen, m) {
     const S = (i) => toScreen(face[i].x, face[i].y);
-    // faint tesselation
-    ctx.save(); ctx.strokeStyle = P.cyan; ctx.globalAlpha = 0.08; ctx.lineWidth = 0.5; ctx.beginPath();
-    const tess = F.FACE_LANDMARKS_TESSELATION; for (let i = 0; i < tess.length; i += 3) { const a = S(tess[i].start), b = S(tess[i].end); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
-    ctx.stroke(); ctx.restore();
+    // faint tesselation (high quality only; ~900 lines)
+    if (Q.faceDetail) {
+      ctx.save(); ctx.strokeStyle = P.cyan; ctx.globalAlpha = 0.08; ctx.lineWidth = 0.5; ctx.beginPath();
+      const tess = F.FACE_LANDMARKS_TESSELATION; for (let i = 0; i < tess.length; i += 4) { const a = S(tess[i].start), b = S(tess[i].end); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
+      ctx.stroke(); ctx.restore();
+    }
     // contours
     for (const [conns, col, alpha, lw] of CONTOURS()) {
       ctx.save(); glowStroke(col, lw, 8, alpha); ctx.beginPath();
       for (const c of conns) { const a = S(c.start), b = S(c.end); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
-      ctx.stroke(); ctx.restore();
+      strokeGlow(col, lw, alpha); ctx.restore();
     }
     // irises
     for (const [c, e] of [[468, 469], [473, 474]]) {
@@ -157,12 +170,12 @@ export function createHUD(canvas) {
     const fh = S(10); ctx.save(); glowStroke(P.cyan, 1, 4, 0.7); ctx.beginPath(); ctx.moveTo(fh.x - 8, fh.y - 10); ctx.lineTo(fh.x + 8, fh.y - 10); ctx.moveTo(fh.x, fh.y - 18); ctx.lineTo(fh.x, fh.y - 2); ctx.stroke(); ctx.restore();
     // operator ID card beside the face (screen-right of the bracket)
     const card = idCard, cw = 196, right = maxX + pad + 26 + cw < window.innerWidth;
-    card.style.left = `${right ? maxX + pad + 26 : minX - pad - 26 - cw}px`; card.style.top = `${minY - pad}px`; card.classList.remove('hidden');
+    { const lx = Math.round(right ? maxX + pad + 26 : minX - pad - 26 - cw), ty = Math.round(minY - pad); if (Math.abs((card._lx || 0) - lx) > 2 || Math.abs((card._ty || 0) - ty) > 2) { card._lx = lx; card._ty = ty; card.style.left = `${lx}px`; card.style.top = `${ty}px`; } card.classList.remove('hidden'); }
     const idProg = clamp(m.lockedMs / 2200, 0, 1);
-    if (idProg < 1) { card.classList.add('scanning'); idEl.status.textContent = `IDENTIFYING… ${Math.round(idProg * 100)}%`; idEl.bar.style.width = `${idProg * 100}%`; }
-    else { card.classList.remove('scanning'); idEl.status.textContent = 'AUTHENTICATED'; idEl.bar.style.width = '100%'; }
-    idEl.yaw.textContent = `${m.yaw >= 0 ? 'L' : 'R'}${Math.abs(m.yaw * 45).toFixed(0)}° / ${m.pitch >= 0 ? 'U' : 'D'}${Math.abs(m.pitch * 30).toFixed(0)}°`;
-    idEl.expr.textContent = m.mouth > 0.55 ? 'VOCAL' : m.browRaise ? 'ALERT' : (m.eyeL < 0.25 && m.eyeR < 0.25) ? 'BLINK' : 'NEUTRAL';
+    if (idProg < 1) { card.classList.add('scanning'); setText(idEl.status, `IDENTIFYING… ${Math.round(idProg * 100)}%`); setWidth(idEl.bar, idProg * 100); }
+    else { card.classList.remove('scanning'); setText(idEl.status, 'AUTHENTICATED'); setWidth(idEl.bar, 100); }
+    setText(idEl.yaw, `${m.yaw >= 0 ? 'L' : 'R'}${Math.abs(m.yaw * 45).toFixed(0)}° / ${m.pitch >= 0 ? 'U' : 'D'}${Math.abs(m.pitch * 30).toFixed(0)}°`);
+    setText(idEl.expr, m.mouth > 0.55 ? 'VOCAL' : m.browRaise ? 'ALERT' : (m.eyeL < 0.25 && m.eyeR < 0.25) ? 'BLINK' : 'NEUTRAL');
     ctx.save(); glowStroke(P.cyan, 1, 4, 0.6); ctx.setLineDash([4, 4]); ctx.beginPath();
     ctx.moveTo(right ? maxX + pad : minX - pad, minY - pad + 12); ctx.lineTo(right ? maxX + pad + 26 : minX - pad - 26, minY - pad + 12); ctx.stroke(); ctx.restore();
     // gaze reticle
@@ -230,24 +243,25 @@ export function createHUD(canvas) {
 
     // Biometrics panel
     if (m) {
-      el.yaw.textContent = `${m.yaw >= 0 ? 'L' : 'R'} ${Math.abs(m.yaw * 45).toFixed(0)}°`;
-      el.pitch.textContent = `${m.pitch >= 0 ? 'UP' : 'DN'} ${Math.abs(m.pitch * 30).toFixed(0)}°`;
-      el.eyeL.style.width = `${m.eyeL * 100}%`; el.eyeR.style.width = `${m.eyeR * 100}%`; el.mouth.style.width = `${m.mouth * 100}%`;
-      el.blink.textContent = String(m.blinkCount).padStart(3, '0');
+      setText(el.yaw, `${m.yaw >= 0 ? 'L' : 'R'} ${Math.abs(m.yaw * 45).toFixed(0)}°`);
+      setText(el.pitch, `${m.pitch >= 0 ? 'UP' : 'DN'} ${Math.abs(m.pitch * 30).toFixed(0)}°`);
+      setWidth(el.eyeL, m.eyeL * 100); setWidth(el.eyeR, m.eyeR * 100); setWidth(el.mouth, m.mouth * 100);
+      setText(el.blink, String(m.blinkCount).padStart(3, '0'));
     }
-    el.hands.textContent = hands.length ? hands.map((h) => `${h.label === 'Left' ? 'R' : 'L'}:${h.type.toUpperCase()}`).join('  ') : '— NONE —';
+    setText(el.hands, hands.length ? hands.map((h) => `${h.label === 'Left' ? 'R' : 'L'}:${h.type.toUpperCase()}`).join('  ') : '— NONE —');
 
     const now = performance.now(); fpsN++; fpsAcc += now - fpsLast; fpsLast = now;
-    if (fpsAcc > 500) { el.fps.textContent = `FPS ${Math.round(1000 / (fpsAcc / fpsN))}`; fpsAcc = 0; fpsN = 0; }
+    if (fpsAcc > 500) { setText(el.fps, `FPS ${Math.round(1000 / (fpsAcc / fpsN))}`); fpsAcc = 0; fpsN = 0; }
   }
 
-  const setGesture = (name) => (el.gesture.textContent = name);
-  const setRot = (x, y) => { const d = (r) => String(Math.round(((r * 180) / Math.PI) % 360 + 360) % 360).padStart(3, '0'); el.rot.textContent = `X ${d(x)}° Y ${d(y)}°`; };
-  const setZoom = (s) => (el.zoom.textContent = `${s.toFixed(2)}x`);
-  const setModel = (name) => (el.model.textContent = name);
+  const setGesture = (name) => setText(el.gesture, name);
+  const setRot = (x, y) => { const d = (r) => String(Math.round(((r * 180) / Math.PI) % 360 + 360) % 360).padStart(3, '0'); setText(el.rot, `X ${d(x)}° Y ${d(y)}°`); };
+  const setZoom = (s) => setText(el.zoom, `${s.toFixed(2)}x`);
+  const setModel = (name) => setText(el.model, name);
   const exEl = $('g-explode');
-  const setExplode = (v) => { if (exEl) exEl.textContent = `${Math.round(v * 100)}%`; };
+  const setExplode = (v) => setText(exEl, `${Math.round(v * 100)}%`);
   const setTheme = (t) => Object.assign(P, t);
   const setTrails = (v) => (trailsOn = v);
-  return { draw, setStatus, setGesture, setRot, setZoom, setModel, setExplode, alert, setTheme, setTrails, setGazeActive: (v) => (gazeActive = v) };
+  const requality = () => resize();
+  return { draw, setStatus, setGesture, setRot, setZoom, setModel, setExplode, alert, setTheme, setTrails, requality, setGazeActive: (v) => (gazeActive = v) };
 }

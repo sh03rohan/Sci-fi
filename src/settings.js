@@ -2,7 +2,7 @@
 const KEY = 'holo.settings.v1';
 export const DEFAULTS = {
   dwellMs: 800, rotSens: 1.0, swipeVx: 1400, resetMs: 1200, mirror: true, trails: true,
-  grain: 0.14, voiceVolume: 0.9, alerts: false, alertEvery: 90, hudScale: 1.0, pixelRatio: 2, showHints: true,
+  grain: 0.1, voiceVolume: 0.9, alerts: false, alertEvery: 90, hudScale: 1.0, quality: 'auto', multiUser: false, showHints: true,
 };
 export function createSettings({ container, targets, sound, onChange = () => {} }) {
   const s = { ...DEFAULTS };
@@ -16,13 +16,14 @@ export function createSettings({ container, targets, sound, onChange = () => {} 
     ['voiceVolume', 'VOICE VOLUME', 0, 1, 0.05, ''],
     ['alertEvery', 'ALERT INTERVAL', 30, 300, 10, 's'],
     ['hudScale', 'HUD SCALE', 0.8, 1.3, 0.05, '×'],
-    ['pixelRatio', 'RENDER QUALITY', 1, 2, 0.25, 'dpr'],
   ];
-  const toggles = [['mirror', 'MIRROR CAMERA'], ['trails', 'FINGER TRAILS'], ['alerts', 'RANDOM ALERTS'], ['showHints', 'GESTURE HINTS']];
+  const toggles = [['mirror', 'MIRROR CAMERA'], ['trails', 'FINGER TRAILS'], ['alerts', 'RANDOM ALERTS'], ['showHints', 'GESTURE HINTS'], ['multiUser', 'GUEST OPERATOR (reload)']];
+  const QUAL = ['auto', 'low', 'medium', 'high'];
 
   container.innerHTML = `<div class="set-head"><span>◈ SETTINGS</span><button id="set-close">✕</button></div>
     <div class="set-body">
       ${fields.map(([k, l, min, max, step, unit]) => `<label class="set-row"><span>${l}</span><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${s[k]}"/><b data-v="${k}">${fmt(s[k], unit)}</b></label>`).join('')}
+      <div class="set-row set-quality"><span>QUALITY</span><div class="set-seg">${QUAL.map((q) => `<div class="set-seg-btn${s.quality === q ? ' on' : ''}" data-q="${q}">${q.toUpperCase()}</div>`).join('')}</div><b id="set-fps">—</b></div>
       <div class="set-toggles">${toggles.map(([k, l]) => `<div class="set-toggle${s[k] ? ' on' : ''}" data-t="${k}"><i></i>${l}</div>`).join('')}</div>
       <div class="set-foot"><div class="tb-btn" id="set-reset"><span>↺ DEFAULTS</span></div><div class="set-note">Settings are saved in this browser.</div></div>
     </div>`;
@@ -32,14 +33,17 @@ export function createSettings({ container, targets, sound, onChange = () => {} 
     const k = inp.dataset.k; s[k] = parseFloat(inp.value); container.querySelector(`[data-v="${k}"]`).textContent = fmt(s[k], fields.find((f) => f[0] === k)[5]); save();
   }));
   container.querySelectorAll('.set-toggle').forEach((el) => targets.register(el, () => { const k = el.dataset.t; s[k] = !s[k]; el.classList.toggle('on', s[k]); sound.tick(); save(); }));
+  container.querySelectorAll('.set-seg-btn').forEach((el) => targets.register(el, () => { s.quality = el.dataset.q; container.querySelectorAll('.set-seg-btn').forEach((b) => b.classList.toggle('on', b === el)); sound.tick(); save(); }));
   targets.register(container.querySelector('#set-reset'), () => { Object.assign(s, DEFAULTS); save(); sound.close(); refresh(); });
   function refresh() {
     container.querySelectorAll('input[type=range]').forEach((inp) => { inp.value = s[inp.dataset.k]; container.querySelector(`[data-v="${inp.dataset.k}"]`).textContent = fmt(s[inp.dataset.k], fields.find((f) => f[0] === inp.dataset.k)[5]); });
     container.querySelectorAll('.set-toggle').forEach((el) => el.classList.toggle('on', !!s[el.dataset.t]));
+    container.querySelectorAll('.set-seg-btn').forEach((b) => b.classList.toggle('on', b.dataset.q === s.quality));
   }
+  const setFps = (v) => { const e = container.querySelector('#set-fps'); if (e) e.textContent = v; };
   const open = () => { container.classList.remove('hidden'); refresh(); };
   const close = () => container.classList.add('hidden');
   targets.register(container.querySelector('#set-close'), close);
   onChange(s);
-  return { s, open, close, toggle: () => (container.classList.contains('hidden') ? open() : close()), get isOpen() { return !container.classList.contains('hidden'); } };
+  return { s, open, close, setFps, toggle: () => (container.classList.contains('hidden') ? open() : close()), get isOpen() { return !container.classList.contains('hidden'); } };
 }

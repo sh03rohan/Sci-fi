@@ -34,7 +34,9 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     }, { progressEl: el.querySelector('.tb-prog div') });
   }
   // keep toggles in sync with state changed elsewhere (gestures, keys)
+  let n = 0;
   function update() {
+    if (n++ % 10) return;
     buttons.explode.classList.toggle('active', st.targetExplode > 0.5);
     buttons.slice.classList.toggle('active', st.slice !== null);
     buttons.draw.classList.toggle('active', interaction.modes.draw);

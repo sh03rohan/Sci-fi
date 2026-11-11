@@ -118,6 +118,17 @@ The site must be served over HTTPS (or localhost) or the browser will not
 allow camera access. The MediaPipe runtime and models are bundled in
 `public/wasm` and `public/models`, so no CDN is needed at runtime.
 
+## Performance
+
+Hand/face tracking runs in a Web Worker (`public/tracker-worker.js`) on a
+downscaled frame, so the render loop never waits for MediaPipe; results are
+interpolated between detections. An adaptive quality controller (settings →
+QUALITY, default AUTO) watches the frame rate and steps render resolution,
+face-mesh detail, bloom/grain, trails and library-preview rate up or down.
+The settings panel shows live timings (fps · tracking · 3D · HUD · library).
+If it still feels slow: set QUALITY to LOW, turn off FX, close other tabs
+using the GPU, and make sure the browser has hardware acceleration enabled.
+
 ## Stack
 
 - [Three.js](https://threejs.org) — hologram rendering
