@@ -50,6 +50,22 @@ alt-wheel explode.
   TIME mode). Each model reacts: heart rate, jet thrust, station spin, electron
   energy, city day/night, car speed, galaxy age, DNA unzipping, globe traffic.
 
+## System
+
+- **📸 SNAP** (`P`) saves a PNG of the composited camera + hologram + tracking
+  layers; **● REC** (`R`) records a WebM until pressed again.
+- **⚠ ALERT** (`A`, or “red alert”): an incoming-signal event turns the HUD red,
+  marks one node hostile and times you until you point-and-hold it. Random
+  alerts can be enabled in settings.
+- **⚙ SETTINGS** (`,`): dwell time, rotation sensitivity, swipe threshold,
+  grain, voice volume, HUD scale, render quality, mirror, trails, hints;
+  saved in the browser.
+- **Multi-user:** up to two faces and four hands. The largest face is
+  OPERATOR-01 (ID card, biometrics); a second face is tagged as a guest and
+  its hands are coloured differently.
+- **Mobile:** touch controls (drag rotate, pinch zoom, tap to scan), a compact
+  layout, and 🔄 CAMERA (`K`) to switch between front and rear cameras.
+
 ## Visual FX
 
 ✦ FX (key `F`) toggles bloom glow, film grain, vignette and random hologram

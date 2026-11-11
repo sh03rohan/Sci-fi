@@ -27,7 +27,7 @@ function classifyRaw(lm) {
 export class GestureEngine {
   constructor(toScreen) {
     this.toScreen = toScreen;
-    this.slots = [0, 1].map(() => ({
+    this.slots = [0, 1, 2, 3].map(() => ({
       tipF: new OneEuro2(1.0, 0.015), pinchF: new OneEuro2(1.0, 0.015), palmF: new OneEuro2(0.8, 0.01),
       type: 'none', candidate: 'none', candidateFrames: 0,
     }));
@@ -38,7 +38,7 @@ export class GestureEngine {
     const out = [];
     // Keep slot assignment stable: sort by wrist x so left-most hand is slot 0.
     const sorted = [...hands].sort((a, b) => b.landmarks[WRIST].x - a.landmarks[WRIST].x);
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 4; i++) {
       const slot = this.slots[i];
       const h = sorted[i];
       if (!h) {

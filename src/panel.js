@@ -31,7 +31,8 @@ export function createPanel() {
     const a = localToScreen(anchorLocal);
     const W = window.innerWidth, H = window.innerHeight, pw = 300, ph = panel.offsetHeight || 200;
     const right = a.x + 70 + pw < W;
-    const left = right ? a.x + 70 : a.x - 70 - pw;
+    let left = right ? a.x + 70 : a.x - 70 - pw;
+    left = Math.min(Math.max(left, 8), Math.max(8, W - pw - 8));
     const top = Math.min(Math.max(a.y - 60, 60), H - ph - 40);
     panel.style.left = `${left}px`; panel.style.top = `${top}px`;
     const ex = right ? left : left + pw, ey = top + 14;

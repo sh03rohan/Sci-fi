@@ -51,9 +51,9 @@ export function createHUD(canvas) {
   }
 
   /* ------------ trails & sparks ------------ */
-  const trails = [[], []]; const sparks = []; const prevType = ['none', 'none'];
+  const trails = [[], [], [], []]; const sparks = []; const prevType = ['none', 'none', 'none', 'none']; let trailsOn = true; let faceCentres = [];
   function updateTrails(hands, dt) {
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 4; i++) {
       const h = hands.find((x) => x.slot === i); const tr = trails[i];
       if (h) {
         const p = h.type === 'pinch' ? h.pinch : h.tip;
@@ -68,6 +68,7 @@ export function createHUD(canvas) {
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.9; s.vy = s.vy * 0.9 + 300 * dt; s.t -= dt * 1.8; if (s.t <= 0) sparks.splice(i, 1); }
   }
   function drawTrails() {
+    if (!trailsOn) return;
     for (const tr of trails) {
       if (tr.length < 2) continue;
       ctx.save(); ctx.lineCap = 'round'; ctx.shadowColor = P.cyan; ctx.shadowBlur = 10;
@@ -78,8 +79,14 @@ export function createHUD(canvas) {
   }
 
   /* ------------ HAND ------------ */
+  function ownerOf(h) {
+    if (faceCentres.length < 2) return 0;
+    const x = h.points[0].x; let best = 0, bd = 1e9; faceCentres.forEach((c, i) => { const d = Math.abs(c.x - x); if (d < bd) { bd = d; best = i; } }); return best;
+  }
   function drawHand(h) {
-    const col = h.type === 'pinch' ? P.amber : h.type === 'fist' ? P.pink : h.type === 'open' ? WHITE : h.type === 'peace' ? P.cyan : P.green;
+    const owner = ownerOf(h);
+    let col = h.type === 'pinch' ? P.amber : h.type === 'fist' ? P.pink : h.type === 'open' ? WHITE : h.type === 'peace' ? P.cyan : P.green;
+    if (owner > 0 && (h.type === 'none' || h.type === 'point' || h.type === 'peace')) col = P.pink;
     const K = h.points;
     ctx.save(); glowStroke(col, 1.6, 10, 0.85);
     ctx.beginPath(); for (const [a, b] of HAND_CONNECTIONS) { ctx.moveTo(K[a].x, K[a].y); ctx.lineTo(K[b].x, K[b].y); } ctx.stroke();
@@ -96,7 +103,7 @@ export function createHUD(canvas) {
     let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     for (const p of K) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
     bracket(minX - 14, minY - 14, maxX - minX + 28, maxY - minY + 28, col, 12, 1);
-    ctx.save(); text(`${h.label === 'Left' ? 'R' : 'L'}.HAND · ${h.type.toUpperCase()}`, minX - 14, minY - 20, col, 10); ctx.restore();
+    ctx.save(); text(`OP-0${owner + 1} ${h.label === 'Left' ? 'R' : 'L'}.HAND · ${h.type.toUpperCase()}`, minX - 14, minY - 20, col, 10); ctx.restore();
     // pinch meter between thumb and index
     const d = dist(K[4], K[8]), ref = dist(K[0], K[9]) || 1, pct = clamp(1 - d / (ref * 0.9), 0, 1);
     ctx.save(); glowStroke(h.type === 'pinch' ? P.amber : col, 1, 4, 0.7); ctx.setLineDash([3, 4]);
@@ -168,6 +175,18 @@ export function createHUD(canvas) {
     return m;
   }
 
+  function drawSecondaryFace(face, toScreen, idx) {
+    const S = (i) => toScreen(face[i].x, face[i].y);
+    ctx.save(); glowStroke(P.pink, 1.2, 8, 0.8); ctx.beginPath();
+    for (const c of F.FACE_LANDMARKS_FACE_OVAL) { const a = S(c.start), b = S(c.end); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
+    for (const conns of [F.FACE_LANDMARKS_LEFT_EYE, F.FACE_LANDMARKS_RIGHT_EYE, F.FACE_LANDMARKS_LIPS]) for (const c of conns) { const a = S(c.start), b = S(c.end); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
+    ctx.stroke(); ctx.restore();
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (const c of F.FACE_LANDMARKS_FACE_OVAL) { const p = S(c.start); minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+    bracket(minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36, P.pink, 18, 1.5);
+    ctx.save(); ctx.fillStyle = P.pink; ctx.globalAlpha = 0.18; ctx.fillRect(minX - 18, minY - 42, 150, 20); ctx.globalAlpha = 1; text(`OPERATOR-0${idx + 1} · GUEST`, minX - 12, minY - 28, P.pink, 11); ctx.restore();
+  }
+
   function drawCursor(c) {
     ctx.save();
     const col = c.hover ? WHITE : c.active ? P.pink : P.cyan;
@@ -191,11 +210,13 @@ export function createHUD(canvas) {
     ctx.restore();
   }
 
-  function draw({ hands, face, fm, toScreen, cursor, zoomLine, hint, dt }) {
+  function draw({ hands, face, faces = [], fm, toScreen, cursor, zoomLine, hint, dt }) {
     t += dt || 0.016;
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     let m = null;
     if (face && fm?.present) m = drawFace(face, toScreen, fm); else idCard.classList.add('hidden');
+    faceCentres = faces.map((f) => toScreen(f[1].x, f[1].y));
+    faces.slice(1).forEach((f, i) => drawSecondaryFace(f, toScreen, i + 1));
     updateTrails(hands, dt || 0.016); drawTrails();
     for (const h of hands) drawHand(h);
     if (zoomLine) {
@@ -227,5 +248,6 @@ export function createHUD(canvas) {
   const exEl = $('g-explode');
   const setExplode = (v) => { if (exEl) exEl.textContent = `${Math.round(v * 100)}%`; };
   const setTheme = (t) => Object.assign(P, t);
-  return { draw, setStatus, setGesture, setRot, setZoom, setModel, setExplode, alert, setTheme, setGazeActive: (v) => (gazeActive = v) };
+  const setTrails = (v) => (trailsOn = v);
+  return { draw, setStatus, setGesture, setRot, setZoom, setModel, setExplode, alert, setTheme, setTrails, setGazeActive: (v) => (gazeActive = v) };
 }

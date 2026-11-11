@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 import { clamp, dist } from './util.js';
 
-const DWELL_MS = 800;        // hold the pointer this long to "touch"
 const DWELL_RADIUS = 30;     // px the pointer may wander during a dwell
-const RESET_MS = 1200;       // open palm held still
-const SWIPE_VX = 1400;       // px/s palm speed that counts as a swipe
 const SWIPE_COOLDOWN = 900;
-const ROT_SENS = 0.011;
+// tunables (overridden by the settings panel)
+const cfg = { dwellMs: 800, resetMs: 1200, swipeVx: 1400, rotSens: 1.0 };
+const ROT = () => 0.011 * cfg.rotSens;
 
 /*
   Gesture map
@@ -53,7 +52,7 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
       st.hover = null; lastHover = null; scene.endStroke();
       if (instant) { targets.fire(target); targets.setHover(null); return; }
       if (!dwell || dwell.target !== target) dwell = { start: now, origin: { ...p }, fired: false, target };
-      const prog = clamp((now - dwell.start) / DWELL_MS, 0, 1);
+      const prog = clamp((now - dwell.start) / cfg.dwellMs, 0, 1);
       if (prog >= 1 && !dwell.fired) { dwell.fired = true; targets.fire(target); }
       targets.setHover(target, dwell.fired ? 1 : prog);
       cursor = { x: p.x, y: p.y, progress: dwell.fired ? 0 : prog, active: true, hover: true, label: 'SELECT' };
@@ -76,7 +75,7 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
     if (instant) { if (hit) openAt(hit); return; }
     if (!hit) { dwell = null; cursor = { x: p.x, y: p.y, progress: 0, active: false, hover: false }; return; }
     if (!dwell || dwell.target || dist(dwell.origin, p) > DWELL_RADIUS) dwell = { start: now, origin: { ...p }, fired: false };
-    const prog = clamp((now - dwell.start) / DWELL_MS, 0, 1);
+    const prog = clamp((now - dwell.start) / cfg.dwellMs, 0, 1);
     if (prog >= 1 && !dwell.fired) { dwell.fired = true; openAt(hit); }
     cursor = { x: p.x, y: p.y, progress: dwell.fired ? 0 : prog, active: true, hover: !!hover };
   }
@@ -107,8 +106,8 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
         hint = { x: p.x, y: p.y, label: `T ${Math.round(st.time * 100)}%`, progress: st.time };
       } else {
         gestureName = 'ROTATE';
-        st.rotY += dx * ROT_SENS; st.rotX += dy * ROT_SENS;
-        st.velY = dx * ROT_SENS * 30; st.velX = dy * ROT_SENS * 30; st.autoSpin = false;
+        st.rotY += dx * ROT(); st.rotX += dy * ROT();
+        st.velY = dx * ROT() * 30; st.velX = dy * ROT() * 30; st.autoSpin = false;
       }
     } else release();
 
@@ -140,14 +139,14 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
       if (open.length === 1 && !pinching.length && !fists.length) {
         const h = open[0];
         gestureName = 'OPEN';
-        if (Math.abs(h.vel.x) > SWIPE_VX && now - lastSwipe > SWIPE_COOLDOWN) {
+        if (Math.abs(h.vel.x) > cfg.swipeVx && now - lastSwipe > SWIPE_COOLDOWN) {
           lastSwipe = now; openHold = null;
           library.step(h.vel.x > 0 ? 1 : -1); // moving right (on screen) → next
           gestureName = h.vel.x > 0 ? 'SWIPE →' : '← SWIPE';
         } else {
           const speed = Math.hypot(h.vel.x, h.vel.y);
           if (!openHold || speed > 260) openHold = { start: now };
-          const prog = clamp((now - openHold.start) / RESET_MS, 0, 1);
+          const prog = clamp((now - openHold.start) / cfg.resetMs, 0, 1);
           if (prog > 0.15) hint = { x: h.palm.x, y: h.palm.y, label: 'RESET', progress: prog };
           if (prog >= 1) { resetAll(); openHold = null; }
         }
@@ -204,18 +203,18 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
     if (mDrag) {
       const dx = e.clientX - mDrag.x, dy = e.clientY - mDrag.y; mDrag = { x: e.clientX, y: e.clientY, moved: mDrag.moved + Math.abs(dx) + Math.abs(dy), shift: mDrag.shift };
       if (mDrag.shift) { const k = worldPerPx() / st.scale; st.targetOffset.x = clamp(st.targetOffset.x + dx * k, -2.4, 1.6); st.targetOffset.y = clamp(st.targetOffset.y - dy * k, -1.2, 1.2); }
-      else { st.rotY += dx * ROT_SENS; st.rotX += dy * ROT_SENS; st.velY = dx * ROT_SENS * 30; st.velX = dy * ROT_SENS * 30; }
+      else { st.rotY += dx * ROT(); st.rotX += dy * ROT(); st.velY = dx * ROT() * 30; st.velX = dy * ROT() * 30; }
       st.autoSpin = false;
     }
   });
   window.addEventListener('mousedown', (e) => {
-    if (e.target.closest('#panel,#landing,#library,#toolbar')) return;
+    if (e.target.closest?.('#panel,#landing,#library,#toolbar,#settings')) return;
     if (modes.draw) { mDraw = true; return; }
     mDrag = { x: e.clientX, y: e.clientY, moved: 0, shift: e.shiftKey };
   });
   window.addEventListener('mouseup', (e) => {
     if (mDraw) { mDraw = false; scene.endStroke(); return; }
-    if (mDrag && mDrag.moved < 6 && !e.target.closest('#panel,#landing,#library,#toolbar')) handlePointer({ x: e.clientX, y: e.clientY }, performance.now(), true);
+    if (mDrag && mDrag.moved < 6 && !e.target.closest?.('#panel,#landing,#library,#toolbar,#settings')) handlePointer({ x: e.clientX, y: e.clientY }, performance.now(), true);
     mDrag = null;
   });
   document.addEventListener('mouseleave', () => { mouse.inside = false; });
@@ -234,5 +233,32 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
     const n = parseInt(e.key, 10); if (n >= 1 && n <= scene.defs.length) library.select(n - 1);
   });
 
-  return { update, setMode, modes, resetAll, set onFaceEvent(fn) { onFaceEvent = fn; } };
+  // ---------- touch (mobile) ----------
+  let touches = null;
+  window.addEventListener('touchstart', (e) => {
+    if (e.target.closest('#panel,#landing,#library,#toolbar,#settings,#timeline')) return;
+    touches = { pts: [...e.touches].map((t) => ({ x: t.clientX, y: t.clientY })), moved: 0, t0: performance.now() };
+  }, { passive: true });
+  window.addEventListener('touchmove', (e) => {
+    if (!touches) return;
+    const pts = [...e.touches].map((t) => ({ x: t.clientX, y: t.clientY }));
+    if (pts.length === 1 && touches.pts.length === 1) {
+      const dx = pts[0].x - touches.pts[0].x, dy = pts[0].y - touches.pts[0].y; touches.moved += Math.abs(dx) + Math.abs(dy);
+      if (modes.draw) { const hit = scene.raycast(pts[0].x, pts[0].y); if (hit) scene.drawPoint(hit.point); }
+      else { st.rotY += dx * ROT(); st.rotX += dy * ROT(); st.velY = dx * ROT() * 30; st.velX = dy * ROT() * 30; st.autoSpin = false; }
+    } else if (pts.length >= 2 && touches.pts.length >= 2) {
+      const d0 = dist(touches.pts[0], touches.pts[1]), d1 = dist(pts[0], pts[1]);
+      st.targetScale = clamp(st.targetScale * (d1 / (d0 || 1)), 0.5, 2.3); st.autoSpin = false; touches.moved += 10;
+    }
+    touches.pts = pts;
+  }, { passive: true });
+  window.addEventListener('touchend', (e) => {
+    if (!touches) return;
+    if (touches.moved < 8 && performance.now() - touches.t0 < 500 && touches.pts.length === 1) handlePointer(touches.pts[0], performance.now(), true);
+    if (modes.draw) scene.endStroke();
+    if (!e.touches.length) touches = null; else touches.pts = [...e.touches].map((t) => ({ x: t.clientX, y: t.clientY }));
+  });
+
+  function applySettings(sv) { cfg.dwellMs = sv.dwellMs; cfg.resetMs = sv.resetMs; cfg.swipeVx = sv.swipeVx; cfg.rotSens = sv.rotSens; }
+  return { update, setMode, modes, resetAll, applySettings, set onFaceEvent(fn) { onFaceEvent = fn; } };
 }

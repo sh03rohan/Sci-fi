@@ -25,7 +25,7 @@ export function createVoice({ scene, library, interaction, panel, hud, sound, ex
   const log = [];
 
   /* ---------- speaking ---------- */
-  let voice = null;
+  let voice = null, volume = 0.9;
   function pickVoice() {
     const vs = speechSynthesis.getVoices(); if (!vs.length) return;
     voice = vs.find((v) => /en-GB/i.test(v.lang) && /female|Google UK English Female|Libby|Sonia/i.test(v.name))
@@ -39,7 +39,7 @@ export function createVoice({ scene, library, interaction, panel, hud, sound, ex
     if (priority) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(num(text));
     if (voice) u.voice = voice;
-    u.rate = 1.04; u.pitch = 0.85; u.volume = 0.9;
+    u.rate = 1.04; u.pitch = 0.85; u.volume = volume;
     // pause recognition while speaking so the system does not hear itself
     u.onstart = () => { if (rec && listening) { try { rec.abort(); } catch {} } };
     u.onend = () => { if (wanted) scheduleRestart(150); };
@@ -114,6 +114,13 @@ export function createVoice({ scene, library, interaction, panel, hud, sound, ex
     if (/\b(theme|colou?r|palette|skin)\b/.test(t)) { const k = extras.fx?.themeFromWords(t); if (k) { const th = extras.fx.applyTheme(k); return say(`${th.name} theme.`); } const th = extras.fx?.cycleTheme(); return say(`${th?.name || 'Next'} theme.`); }
     if (/\b(effects?|fx|glitch|bloom)\b/.test(t)) { const off = /\b(off|stop|disable|no)\b/.test(t); extras.fx?.setFX(!off); return say(off ? 'Effects off.' : 'Effects on.'); }
     if (/\b(occlu|depth|mask)/.test(t)) { const off = /\b(off|stop|disable)\b/.test(t); extras.occlusion?.setEnabled(!off); return say(off ? 'Occlusion off.' : 'Occlusion layer engaged.'); }
+    if (/\b(screenshot|snapshot|capture|snap)\b/.test(t)) { extras.recorder?.screenshot(); return say('Frame captured.'); }
+    if (/\b(stop|end|finish)\b.*\brecord/.test(t)) { extras.recorder?.stop(); return say('Recording saved.'); }
+    if (/\brecord/.test(t)) { extras.recorder?.start(); return say('Recording.'); }
+    if (/\b(red alert|alert mode|simulate (an? )?(attack|threat)|incoming)\b/.test(t)) { extras.alerts?.trigger(); return; }
+    if (/\b(stand down|all clear|cancel alert|resolve)\b/.test(t)) { extras.alerts?.resolve(); return say('Standing down.'); }
+    if (/\b(settings|preferences|options|config)\b/.test(t)) { extras.settings?.toggle(); return say('Settings.'); }
+    if (/\b(flip|switch|rear|front)\b.*\bcamera\b|\bcamera\b.*\b(flip|switch)\b/.test(t)) { extras.flipCamera?.(); return say('Switching camera.'); }
     if (/\b(status|report|sitrep|summary)\b/.test(t)) {
       const n = cur ? cur.hotspots.length : 0;
       return say(`${cur ? cur.def.name : 'No model'} on stage with ${n} registered nodes. Zoom ${st.scale.toFixed(1)}. All systems nominal.`);
@@ -155,5 +162,5 @@ export function createVoice({ scene, library, interaction, panel, hud, sound, ex
   panel.onOpen = (info) => { if (wanted) say(`${info.title.replace(/·/g, ',')}.`); };
 
   setState(SR ? 'VOICE ○ OFF' : 'VOICE ○ UNSUPPORTED', 'off');
-  return { start, stop, toggle, say, handle, get active() { return wanted; }, get supported() { return !!SR; }, setMuted: (m) => (muted = m) };
+  return { start, stop, toggle, say, handle, get active() { return wanted; }, get supported() { return !!SR; }, setMuted: (m) => (muted = m), setVolume: (v) => (volume = v) };
 }

@@ -1,5 +1,5 @@
 // Bottom-right tool buttons, dwell-selectable like the library.
-export function createToolbar({ container, targets, interaction, scene, sound, voice, live, glb, fx, occlusion }) {
+export function createToolbar({ container, targets, interaction, scene, sound, voice, live, glb, fx, occlusion, recorder, alerts, settings, flipCamera }) {
   const st = scene.state;
   const defs = [
     { id: 'draw', label: '✎ DRAW', toggle: true, on: () => interaction.setMode('draw', true), off: () => interaction.setMode('draw', false) },
@@ -14,6 +14,11 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     { id: 'occl', label: '✋ OCCLUDE', toggle: true, on: () => occlusion.setEnabled(true), off: () => occlusion.setEnabled(false) },
     { id: 'theme', label: '◐ THEME', on: () => fx.cycleTheme() },
     { id: 'gaze', label: '◎ GAZE', toggle: true, on: () => interaction.setMode('gaze', true), off: () => interaction.setMode('gaze', false) },
+    { id: 'snap', label: '📸 SNAP', on: () => recorder.screenshot() },
+    { id: 'rec', label: '● REC', toggle: true, on: () => recorder.start(), off: () => recorder.stop() },
+    { id: 'alert', label: '⚠ ALERT', on: () => alerts.trigger() },
+    { id: 'flip', label: '🔄 CAMERA', on: () => flipCamera() },
+    { id: 'settings', label: '⚙ SETTINGS', toggle: true, on: () => settings.open(), off: () => settings.close() },
     { id: 'voice', label: '🎤 VOICE', toggle: true, on: () => { if (!voice.toggle()) { /* unsupported */ } }, off: () => voice.stop() },
   ];
   container.innerHTML = `<div class="tb-title">◈ TOOLS</div>`;
@@ -38,6 +43,9 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     buttons.time.classList.toggle('active', interaction.modes.time);
     buttons.fx.classList.toggle('active', fx.state.fx);
     buttons.occl.classList.toggle('active', occlusion.enabled);
+    buttons.rec.classList.toggle('active', recorder.recording);
+    buttons.settings.classList.toggle('active', settings.isOpen);
+    buttons.alert.classList.toggle('active', alerts.active);
     buttons.live.classList.toggle('active', live.active);
     buttons.voice.classList.toggle('disabled', !voice.supported);
   }

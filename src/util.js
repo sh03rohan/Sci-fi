@@ -31,7 +31,7 @@ export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 // Maps video-normalized coords (0..1, un-mirrored) to screen pixels,
 // matching a mirrored <video> with object-fit: cover.
-export function makeVideoMapper(video) {
+export function makeVideoMapper(video, mirror = () => true) {
   return function toScreen(u, v) {
     const W = window.innerWidth, H = window.innerHeight;
     const vw = video.videoWidth || 1280, vh = video.videoHeight || 720;
@@ -39,6 +39,6 @@ export function makeVideoMapper(video) {
     let sw, sh, ox, oy;
     if (sa > va) { sw = W; sh = W / va; ox = 0; oy = (H - sh) / 2; }
     else { sh = H; sw = H * va; oy = 0; ox = (W - sw) / 2; }
-    return { x: ox + (1 - u) * sw, y: oy + v * sh };
+    return { x: ox + (mirror() ? 1 - u : u) * sw, y: oy + v * sh };
   };
 }

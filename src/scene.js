@@ -177,7 +177,11 @@ export function createScene(canvas) {
     return { x: (p.x + 1) / 2 * window.innerWidth, y: (1 - p.y) / 2 * window.innerHeight, front: facing > -0.1 };
   }
 
-  function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  function resize() {
+    const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    const narrow = w < 900 || w / h < 1.1;              // phones / portrait: centre the hologram, pull the camera back
+    HOME.x = narrow ? 0 : 1.05; camera.position.z = narrow ? (w / h < 0.8 ? 7.2 : 5.8) : 4.7;
+  }
   window.addEventListener('resize', resize); resize();
 
   let t = 0;

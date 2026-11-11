@@ -11,7 +11,7 @@ export async function createTracker(onLog = () => {}) {
   const hand = await HandLandmarker.createFromOptions(vision, {
     baseOptions: { modelAssetPath: `${BASE}models/hand_landmarker.task`, delegate: 'GPU' },
     runningMode: 'VIDEO',
-    numHands: 2,
+    numHands: 4,
     minHandDetectionConfidence: 0.6,
     minHandPresenceConfidence: 0.6,
     minTrackingConfidence: 0.5,
@@ -21,13 +21,13 @@ export async function createTracker(onLog = () => {}) {
   const face = await FaceLandmarker.createFromOptions(vision, {
     baseOptions: { modelAssetPath: `${BASE}models/face_landmarker.task`, delegate: 'GPU' },
     runningMode: 'VIDEO',
-    numFaces: 1,
+    numFaces: 2,
     outputFaceBlendshapes: false,
   });
 
   let lastVideoTime = -1;
   let frame = 0;
-  let faceResult = null;
+  let faceResult = null, faces = [];
 
   return {
     // Returns { hands: [{landmarks, label}], face: landmarks|null } in video-normalized coords.
@@ -46,9 +46,13 @@ export async function createTracker(onLog = () => {}) {
       // Face every other frame: it is heavier and only drives parallax + a frame.
       if (frame % 2 === 0) {
         const f = face.detectForVideo(video, now);
-        faceResult = f.faceLandmarks?.[0] || null;
+        faces = f.faceLandmarks || [];
+        // primary operator = largest face
+        const size = (lm) => Math.abs(lm[454].x - lm[234].x);
+        faces = [...faces].sort((a, b) => size(b) - size(a));
+        faceResult = faces[0] || null;
       }
-      return { hands, face: faceResult };
+      return { hands, face: faceResult, faces };
     },
   };
 }
