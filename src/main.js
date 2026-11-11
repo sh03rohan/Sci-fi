@@ -6,6 +6,7 @@ import { createHUD } from './hud.js';
 import { createPanel } from './panel.js';
 import { createInteraction } from './interaction.js';
 import { createSound } from './sound.js';
+import { createLibrary } from './library.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -31,9 +32,13 @@ async function boot() {
   const scene = createScene($('gl'));
   const hud = createHUD($('overlay'));
   const panel = createPanel();
-  const hotspots = await fetch(`${import.meta.env.BASE_URL}data/hotspots.json`).then((r) => r.json());
-  scene.addHotspots(hotspots);
-  bootLog(`hologram core online · ${hotspots.length} nodes registered`, 'ok');
+  const models = await fetch(`${import.meta.env.BASE_URL}data/models.json`).then((r) => r.json());
+  scene.loadModels(models, 'globe');
+  const library = createLibrary({ scene, container: $('library'), defs: models, sound });
+  scene.onModelChange((def) => hud.setModel(def.name));
+  hud.setModel(scene.current.def.name);
+  const nodes = models.reduce((n, m) => n + m.hotspots.length, 0);
+  bootLog(`hologram core online · ${models.length} models · ${nodes} nodes`, 'ok');
 
   let cameraOk = false;
   try {
@@ -66,10 +71,12 @@ async function boot() {
 
   const toScreen = makeVideoMapper(video);
   const gestures = new GestureEngine(toScreen);
-  const interaction = createInteraction({ scene, panel, hud, sound });
+  const interaction = createInteraction({ scene, panel, hud, sound, library });
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
+  let injected = null; // debug: window.__holo.inject({hands,face}) feeds synthetic landmarks
+  window.__holo = { inject: (r) => (injected = r), scene, library };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {
@@ -77,7 +84,8 @@ async function boot() {
     const now = performance.now();
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
 
-    if (tracker) {
+    if (injected) lastResult = injected;
+    else if (tracker) {
       const r = tracker.detect(video);
       if (r) lastResult = r;
     }
@@ -90,8 +98,9 @@ async function boot() {
 
     const { cursor, zoomLine } = interaction.update(hands, face, now);
     scene.update(dt);
+    library.render(dt);
     panel.update(scene.localToScreen);
-    hud.draw({ hands, face, toScreen, cursor, zoomLine });
+    hud.draw({ hands, face, toScreen, cursor, zoomLine, dt });
   }
   loop();
 }

@@ -11,7 +11,7 @@
   <video id="cam" autoplay playsinline muted></video>
   <div id="cam-tint"></div>
 
-  <!-- Layer 2: 3D hologram -->
+  <!-- Layer 2: 3D hologram (+ library minis) -->
   <canvas id="gl"></canvas>
 
   <!-- Layer 3: tracking overlay -->
@@ -20,7 +20,7 @@
   <!-- Layer 4: HUD -->
   <div id="hud" class="hidden">
     <div class="hud-top">
-      <div class="hud-brand">◉ HOLO-INTERFACE <span>v1.0</span></div>
+      <div class="hud-brand">◉ HOLO-INTERFACE <span>v2.0</span></div>
       <div class="hud-status">
         <span id="st-cam">CAM ○</span>
         <span id="st-hand">HAND ○</span>
@@ -29,27 +29,31 @@
       </div>
     </div>
 
+    <!-- model library (left) -->
+    <div id="library"></div>
+
+    <!-- telemetry (bottom-left) -->
     <div class="hud-left">
-      <div class="hud-block">
-        <div class="hud-label">GESTURE</div>
-        <div id="g-name" class="hud-value">NONE</div>
-      </div>
-      <div class="hud-block">
-        <div class="hud-label">MODEL</div>
-        <div class="hud-value">TERRA_WIRE</div>
-      </div>
-      <div class="hud-block">
-        <div class="hud-label">ROTATION</div>
-        <div id="g-rot" class="hud-value">X 000° Y 000°</div>
-      </div>
-      <div class="hud-block">
-        <div class="hud-label">ZOOM</div>
-        <div id="g-zoom" class="hud-value">1.00x</div>
-      </div>
+      <div class="hud-block"><div class="hud-label">ACTIVE MODEL</div><div id="g-model" class="hud-value">—</div></div>
+      <div class="hud-block"><div class="hud-label">GESTURE</div><div id="g-name" class="hud-value">NONE</div></div>
+      <div class="hud-block"><div class="hud-label">ROTATION</div><div id="g-rot" class="hud-value">X 000° Y 000°</div></div>
+      <div class="hud-block"><div class="hud-label">ZOOM</div><div id="g-zoom" class="hud-value">1.00x</div></div>
+    </div>
+
+    <!-- biometrics (right) -->
+    <div class="hud-right">
+      <div class="hud-title">◈ BIOMETRICS</div>
+      <div class="bio-row"><span>HEAD YAW</span><b id="b-yaw">—</b></div>
+      <div class="bio-row"><span>HEAD PITCH</span><b id="b-pitch">—</b></div>
+      <div class="bio-row"><span>L.EYE</span><i class="meter"><em id="b-eyel"></em></i></div>
+      <div class="bio-row"><span>R.EYE</span><i class="meter"><em id="b-eyer"></em></i></div>
+      <div class="bio-row"><span>MOUTH</span><i class="meter pink"><em id="b-mouth"></em></i></div>
+      <div class="bio-row"><span>BLINKS</span><b id="b-blink">000</b></div>
+      <div class="bio-row"><span>HANDS</span><b id="b-hands">— NONE —</b></div>
     </div>
 
     <div class="hud-bottom">
-      <div class="hud-hint">☝ POINT &amp; HOLD → SCAN &nbsp;·&nbsp; 🤏 PINCH &amp; DRAG → ROTATE &nbsp;·&nbsp; 🤏🤏 TWO HANDS → ZOOM &nbsp;·&nbsp; ✊ FIST → RESET</div>
+      <div class="hud-hint">☝ POINT &amp; HOLD → SCAN / SELECT &nbsp;·&nbsp; 🤏 PINCH &amp; DRAG → ROTATE &nbsp;·&nbsp; 🤏🤏 TWO HANDS → ZOOM &nbsp;·&nbsp; ✊ FIST → RESET</div>
     </div>
 
     <div class="corner tl"></div><div class="corner tr"></div>
