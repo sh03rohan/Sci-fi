@@ -6,10 +6,11 @@ import { MODEL_BUILDERS_2 } from './models2.js';
 const BUILDERS = { ...MODEL_BUILDERS, ...MODEL_BUILDERS_2 };
 export const registerBuilder = (id, fn) => (BUILDERS[id] = fn);
 
-function glowTexture() {
+function glowTexture(hex = '#00e5ff') {
+  const n = parseInt(hex.slice(1), 16), rgb = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const g = c.getContext('2d'), grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grd.addColorStop(0, 'rgba(0,229,255,0.55)'); grd.addColorStop(0.4, 'rgba(0,229,255,0.12)'); grd.addColorStop(1, 'rgba(0,229,255,0)');
+  grd.addColorStop(0, `rgba(${rgb},0.55)`); grd.addColorStop(0.4, `rgba(${rgb},0.12)`); grd.addColorStop(1, `rgba(${rgb},0)`);
   g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(c);
 }
@@ -155,6 +156,7 @@ export function createScene(canvas) {
   }
   function setSlice(worldY) { state.slice = worldY; }
   function setTime(k) { state.time = clamp(k, 0, 1); current?.setTime?.(state.time); }
+  function setTheme(th, recolor) { recolor(root); glow.material.map?.dispose(); glow.material.map = glowTexture(th.primary); glow.material.needsUpdate = true; }
   const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function raycast(sx, sy) {
     if (!current || transition) return null;
@@ -241,7 +243,7 @@ export function createScene(canvas) {
 
   return {
     state, renderer, camera, loadModels, select, onModelChange, raycast, localToScreen, pulse, update, resize,
-    drawPoint, endStroke, clearStrokes, setSlice, setTime, registerBuilder, HOME,
+    drawPoint, endStroke, clearStrokes, setSlice, setTime, setTheme, registerBuilder, HOME,
     get current() { return current; }, get defs() { return defs; }, get busy() { return !!transition; },
   };
 }

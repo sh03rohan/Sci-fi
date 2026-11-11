@@ -14,6 +14,10 @@
   <!-- Layer 2: 3D hologram (+ library minis) -->
   <canvas id="gl"></canvas>
 
+  <!-- Layer 2b: hand occlusion (person pixels over the hologram) -->
+  <canvas id="occl"></canvas>
+  <div id="grain"></div>
+
   <!-- Layer 3: tracking overlay -->
   <canvas id="overlay"></canvas>
 
@@ -46,6 +50,7 @@
       <div class="hud-block"><div class="hud-label">ROTATION</div><div id="g-rot" class="hud-value">X 000° Y 000°</div></div>
       <div class="hud-block"><div class="hud-label">ZOOM</div><div id="g-zoom" class="hud-value">1.00x</div></div>
       <div class="hud-block"><div class="hud-label">EXPLODE</div><div id="g-explode" class="hud-value">0%</div></div>
+      <div class="hud-block"><div class="hud-label">THEME</div><div id="g-theme" class="hud-value">CYAN</div></div>
     </div>
 
     <!-- tools (right, under biometrics) -->

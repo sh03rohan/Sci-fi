@@ -16,7 +16,7 @@ export function edges(geo, opacity = 0.6, color = CYAN, threshold = 1) {
 }
 export function fresnelSphere(r, color, power, strength, side = THREE.FrontSide) {
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: color }, uPower: { value: power }, uStrength: { value: strength } },
+    uniforms: { uColor: { value: color.clone() }, uPower: { value: power }, uStrength: { value: strength } },
     vertexShader: `#include <clipping_planes_pars_vertex>
       varying vec3 vN; varying vec3 vV;
       void main(){ vec4 mvPosition = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mvPosition.xyz); gl_Position = projectionMatrix*mvPosition;

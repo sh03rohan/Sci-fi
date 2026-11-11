@@ -7,7 +7,7 @@ export function createPanel() {
   const closeBtn = document.getElementById('p-close');
 
   let anchorLocal = null; // THREE.Vector3 in globe-local space
-  let onClose = () => {}, onOpen = () => {};
+  let onClose = () => {}; const openListeners = []; const onOpen = (info) => openListeners.forEach((f) => f(info));
   closeBtn.addEventListener('click', () => close());
 
   function open(info, local) {
@@ -41,5 +41,5 @@ export function createPanel() {
     panel.style.opacity = op; svg.style.opacity = op;
   }
 
-  return { open, close, isOpen, update, set onClose(fn) { onClose = fn; }, set onOpen(fn) { onOpen = fn; } };
+  return { open, close, isOpen, update, set onClose(fn) { onClose = fn; }, set onOpen(fn) { openListeners.push(fn); } };
 }

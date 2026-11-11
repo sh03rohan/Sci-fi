@@ -13,6 +13,8 @@ import { createVoice } from './voice.js';
 import { createFaceState } from './face.js';
 import { createLive } from './live.js';
 import { createGlbImporter } from './glb.js';
+import { createFX } from './fx.js';
+import { createOcclusion } from './occlusion.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -82,8 +84,12 @@ async function boot() {
   const interaction = createInteraction({ scene, panel, hud, sound, library, targets });
   const live = createLive({ scene, sound, hud });
   const glb = createGlbImporter({ scene, library, sound, onLog: (m) => voice?.say?.(m) });
-  const voice = createVoice({ scene, library, interaction, panel, hud, sound, extras: { live } });
-  const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound, voice, live, glb });
+  const fx = createFX({ scene, library, hud, sound });
+  const occlusion = cameraOk ? await createOcclusion({ video, canvas: $('occl'), toScreen, onLog: bootLog }) : { update: () => [], setEnabled: async () => false, enabled: false };
+  const voice = createVoice({ scene, library, interaction, panel, hud, sound, extras: { live, fx, occlusion } });
+  const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound, voice, live, glb, fx, occlusion });
+  panel.onOpen = () => fx.scramblePanel();
+  window.addEventListener('keydown', (e) => { if (e.key === 'c') fx.cycleTheme(); if (e.key === 'f') fx.setFX(!fx.state.fx); if (e.key === 'o') occlusion.setEnabled(!occlusion.enabled); });
   // timeline slider ↔ scene time
   const tlRange = $('tl-range'), tlVal = $('tl-val');
   tlRange.addEventListener('input', () => scene.setTime(tlRange.value / 1000));
@@ -94,7 +100,7 @@ async function boot() {
   let last = performance.now();
   let lastResult = { hands: [], face: null };
   let injected = null; // debug: window.__holo.inject({hands,face}) feeds synthetic landmarks
-  window.__holo = { inject: (r) => (injected = r), scene, library, interaction, voice, live, glb };
+  window.__holo = { inject: (r) => (injected = r), scene, library, interaction, voice, live, glb, fx, occlusion };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {
@@ -121,6 +127,7 @@ async function boot() {
     scene.update(dt);
     library.render(dt);
     panel.update(scene.localToScreen);
+    occlusion.update(hands, now);
     hud.draw({ hands, face, fm, toScreen, cursor, zoomLine, hint, dt });
   }
   loop();

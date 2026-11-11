@@ -1,5 +1,5 @@
 // Bottom-right tool buttons, dwell-selectable like the library.
-export function createToolbar({ container, targets, interaction, scene, sound, voice, live, glb }) {
+export function createToolbar({ container, targets, interaction, scene, sound, voice, live, glb, fx, occlusion }) {
   const st = scene.state;
   const defs = [
     { id: 'draw', label: '✎ DRAW', toggle: true, on: () => interaction.setMode('draw', true), off: () => interaction.setMode('draw', false) },
@@ -10,6 +10,9 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     { id: 'time', label: '⏱ TIME', toggle: true, on: () => { interaction.setMode('time', true); document.getElementById('timeline').classList.remove('hidden'); }, off: () => { interaction.setMode('time', false); document.getElementById('timeline').classList.add('hidden'); } },
     { id: 'live', label: '◉ LIVE', toggle: true, on: () => live.start(), off: () => live.stop() },
     { id: 'load', label: '⬆ LOAD .GLB', on: () => glb.open() },
+    { id: 'fx', label: '✦ FX', toggle: true, on: () => fx.setFX(true), off: () => fx.setFX(false) },
+    { id: 'occl', label: '✋ OCCLUDE', toggle: true, on: () => occlusion.setEnabled(true), off: () => occlusion.setEnabled(false) },
+    { id: 'theme', label: '◐ THEME', on: () => fx.cycleTheme() },
     { id: 'gaze', label: '◎ GAZE', toggle: true, on: () => interaction.setMode('gaze', true), off: () => interaction.setMode('gaze', false) },
     { id: 'voice', label: '🎤 VOICE', toggle: true, on: () => { if (!voice.toggle()) { /* unsupported */ } }, off: () => voice.stop() },
   ];
@@ -33,6 +36,8 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     buttons.voice.classList.toggle('active', voice.active);
     buttons.gaze.classList.toggle('active', interaction.modes.gaze);
     buttons.time.classList.toggle('active', interaction.modes.time);
+    buttons.fx.classList.toggle('active', fx.state.fx);
+    buttons.occl.classList.toggle('active', occlusion.enabled);
     buttons.live.classList.toggle('active', live.active);
     buttons.voice.classList.toggle('disabled', !voice.supported);
   }

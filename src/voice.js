@@ -111,6 +111,9 @@ export function createVoice({ scene, library, interaction, panel, hud, sound, ex
     if (tl) { scene.setTime(parseInt(tl[2], 10) / 100); return say(`Timeline at ${tl[2]} percent.`); }
     if (/\b(live|real[- ]?time|satellite|iss|earthquake)\b/.test(t) && /\b(off|stop|disable)\b/.test(t)) { extras.live?.stop(); return say('Live feed disabled.'); }
     if (/\b(live|real[- ]?time|satellite|iss|earthquake)\b/.test(t)) { extras.live?.start(); if (cur?.def.id !== 'globe') library.select(scene.defs.findIndex((d) => d.id === 'globe')); return say('Live feed online. Tracking the station and seismic events.'); }
+    if (/\b(theme|colou?r|palette|skin)\b/.test(t)) { const k = extras.fx?.themeFromWords(t); if (k) { const th = extras.fx.applyTheme(k); return say(`${th.name} theme.`); } const th = extras.fx?.cycleTheme(); return say(`${th?.name || 'Next'} theme.`); }
+    if (/\b(effects?|fx|glitch|bloom)\b/.test(t)) { const off = /\b(off|stop|disable|no)\b/.test(t); extras.fx?.setFX(!off); return say(off ? 'Effects off.' : 'Effects on.'); }
+    if (/\b(occlu|depth|mask)/.test(t)) { const off = /\b(off|stop|disable)\b/.test(t); extras.occlusion?.setEnabled(!off); return say(off ? 'Occlusion off.' : 'Occlusion layer engaged.'); }
     if (/\b(status|report|sitrep|summary)\b/.test(t)) {
       const n = cur ? cur.hotspots.length : 0;
       return say(`${cur ? cur.def.name : 'No model'} on stage with ${n} registered nodes. Zoom ${st.scale.toFixed(1)}. All systems nominal.`);

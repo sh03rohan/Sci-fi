@@ -50,5 +50,6 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
     r.setScissorTest(false);
   }
 
-  return { select, step, render, addSlot, get selected() { return selected; } };
+  const forEachScene = (fn) => slots.forEach((s) => fn(s.sc));
+  return { select, step, render, addSlot, forEachScene, get selected() { return selected; } };
 }

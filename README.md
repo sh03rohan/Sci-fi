@@ -50,6 +50,15 @@ alt-wheel explode.
   TIME mode). Each model reacts: heart rate, jet thrust, station spin, electron
   energy, city day/night, car speed, galaxy age, DNA unzipping, globe traffic.
 
+## Visual FX
+
+✦ FX (key `F`) toggles bloom glow, film grain, vignette and random hologram
+glitches; panel text scrambles into place. ◐ THEME (key `C`, or “theme amber”)
+cycles CYAN / AMBER / MATRIX / ALERT / ICE across the HUD and the 3D models.
+✋ OCCLUDE (key `O`) loads a selfie-segmentation model: bring a hand close to
+the camera and it is composited over the hologram, so it passes in front.
+Finger trails and pinch sparks are drawn on the tracking layer.
+
 ## Face & eyes
 
 An operator ID card locks onto your face (IDENTIFYING… → AUTHENTICATED) and a
