@@ -29,7 +29,7 @@ export function fresnelSphere(r, color, power, strength, side = THREE.FrontSide)
         float f = pow(1.0 - abs(dot(vN, vV)), uPower); gl_FragColor = vec4(uColor, f*uStrength + 0.02); }`,
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side, clipping: true,
   });
-  return new THREE.Mesh(new THREE.SphereGeometry(r, 48, 48), mat);
+  return new THREE.Mesh(new THREE.SphereGeometry(r, 32, 24), mat);
 }
 
 export function latLonToVec3(lat, lon, r = 1) {

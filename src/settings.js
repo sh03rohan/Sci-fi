@@ -1,7 +1,7 @@
 // Settings panel (gear) with persistent tunables shared by the other modules.
 const KEY = 'holo.settings.v1';
 export const DEFAULTS = {
-  dwellMs: 800, rotSens: 1.0, swipeVx: 1400, resetMs: 1200, mirror: true, trails: true,
+  dwellMs: 800, rotSens: 1.0, swipeVx: 1400, resetMs: 1200, mirror: true, trails: false,
   grain: 0.1, voiceVolume: 0.9, alerts: false, alertEvery: 90, hudScale: 1.0, quality: 'auto', multiUser: false, showHints: true,
 };
 export function createSettings({ container, targets, sound, onChange = () => {} }) {

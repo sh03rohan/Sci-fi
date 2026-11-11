@@ -5,6 +5,7 @@ import { Q } from './quality.js';
 // Left-hand model library: DOM slots with live 3D minis rendered via scissor viewports.
 export function createLibrary({ scene, container, defs, sound, targets }) {
   const slots = [];
+  let allDirty = true; // redraw every mini on the next frame (first frame, theme change, resize, new slot)
   container.innerHTML = `<div class="lib-title">◈ MODEL LIBRARY <span>${defs.length} UNITS</span></div>`;
   function addSlot(def) {
     const i = slots.length;
@@ -18,7 +19,7 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
     cam.position.set(0, mini.radius * 0.55, mini.radius * 3.6); cam.lookAt(0, 0, 0);
     slots.push({ def, el, view: el.querySelector('.lib-view'), prog: el.querySelector('.lib-prog div'), mini, sc, cam, spin: 0 });
     targets.register(el, () => select(i), { progressEl: el.querySelector('.lib-prog div') });
-    container.querySelector('.lib-title span').textContent = `${slots.length} UNITS`;
+    container.querySelector('.lib-title span').textContent = `${slots.length} UNITS`; allDirty = true;
   }
   defs.forEach(addSlot);
 
@@ -35,6 +36,7 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
 
   // Layout rects are cached (getBoundingClientRect every frame forces layout).
   let rects = [], rectsAt = 0, cursor = 0;
+  window.addEventListener('resize', () => (allDirty = true));
   function refreshRects() { rects = slots.map((s) => s.view.getBoundingClientRect()); rectsAt = performance.now(); }
   window.addEventListener('resize', () => (rectsAt = 0));
   function render(dt) {
@@ -43,8 +45,9 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
     // every mini keeps spinning in state, but only a few are drawn per frame (round-robin);
     // selected/hovered ones are always redrawn so they feel live.
     const budget = Q.minisPerFrame, toDraw = new Set();
-    for (let k = 0; k < budget && slots.length; k++) { toDraw.add(cursor % slots.length); cursor++; }
-    slots.forEach((s, i) => { if (i === selected || s.el.classList.contains('hover')) toDraw.add(i); });
+    if (allDirty) { slots.forEach((_, i) => toDraw.add(i)); allDirty = false; }           // first frame / theme change / resize
+    for (let k = 0; k < budget && slots.length; k++) { toDraw.add(cursor % slots.length); cursor++; } // idle previews only at MED+
+    slots.forEach((s, i) => { if (i === selected || s.el.classList.contains('hover')) toDraw.add(i); }); // live ones
     r.setScissorTest(true);
     for (const i of toDraw) {
       const s = slots[i], rect = rects[i]; if (!rect || rect.width < 4) continue;
@@ -58,6 +61,6 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
     r.setScissorTest(false);
   }
 
-  const forEachScene = (fn) => slots.forEach((s) => fn(s.sc));
+  const forEachScene = (fn) => { slots.forEach((s) => fn(s.sc)); allDirty = true; };
   return { select, step, render, addSlot, forEachScene, get selected() { return selected; } };
 }

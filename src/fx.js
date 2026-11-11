@@ -14,7 +14,7 @@ const ORDER = Object.keys(THEMES);
 
 export function createFX({ scene, library, hud, sound }) {
   const gl = document.getElementById('gl'), hudEl = document.getElementById('hud'), grain = document.getElementById('grain');
-  const state = { fx: true, theme: 'cyan' };
+  const state = { fx: false, theme: 'cyan' };
   const base = { primary: new THREE.Color('#00e5ff'), accent: new THREE.Color('#ff3d71'), tert: new THREE.Color('#ffb300') };
 
   /* ---------- glitch scheduler ---------- */
@@ -85,6 +85,6 @@ export function createFX({ scene, library, hud, sound }) {
   onQuality(applyQ);
   // re-theme freshly mounted models
   scene.onModelChange(() => { if (state.theme !== 'cyan') applyTheme(state.theme); });
-  setFX(true);
+  setFX(false);
   return { state, setFX, glitchOnce, scramblePanel, applyTheme, cycleTheme, themeFromWords, THEMES };
 }
