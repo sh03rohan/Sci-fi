@@ -6,6 +6,7 @@ import { createHUD } from './hud.js';
 import { createPanel } from './panel.js';
 import { createInteraction } from './interaction.js';
 import { createSound } from './sound.js';
+import { createTools } from './tools.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -66,10 +67,14 @@ async function boot() {
 
   const toScreen = makeVideoMapper(video);
   const gestures = new GestureEngine(toScreen);
-  const interaction = createInteraction({ scene, panel, hud, sound });
+  let tools;
+  const interaction = createInteraction({ scene, panel, hud, sound, tools: { hitTest: (x, y) => tools.hitTest(x, y), fire: (t) => tools.fire(t), setHover: (t, p) => tools.setHover(t, p) } });
+  tools = createTools({ container: $('tools'), interaction, scene, sound });
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
+  let injected = null; // debug hook: window.__holo.inject({hands,face})
+  window.__holo = { inject: (r) => (injected = r), scene, interaction };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {
@@ -77,7 +82,8 @@ async function boot() {
     const now = performance.now();
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
 
-    if (tracker) {
+    if (injected) lastResult = injected;
+    else if (tracker) {
       const r = tracker.detect(video);
       if (r) lastResult = r;
     }
@@ -88,10 +94,11 @@ async function boot() {
     hud.setStatus('hand', now - handSeen < 300);
     hud.setStatus('face', now - faceSeen < 500);
 
-    const { cursor, zoomLine } = interaction.update(hands, face, now);
+    const { cursor, zoomLine, hint } = interaction.update(hands, face, now);
+    tools.update();
     scene.update(dt);
     panel.update(scene.localToScreen);
-    hud.draw({ hands, face, toScreen, cursor, zoomLine });
+    hud.draw({ hands, face, toScreen, cursor, zoomLine, hint });
   }
   loop();
 }

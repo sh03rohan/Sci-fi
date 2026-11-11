@@ -21,10 +21,15 @@ click **START SYSTEM**. Allow camera access when asked.
 | ☝️ Index finger pointing, hold 0.8 s on the globe | Touch: ripple + info panel |
 | 🤏 Pinch (thumb + index) and drag | Rotate the globe (with inertia) |
 | 🤏🤏 Pinch with both hands, move apart / together | Zoom |
-| ✊ Fist, hold 0.5 s | Reset view, close panel |
+| ✊ Fist and move | Grab and move the hologram |
+| 🖐 Open palm, hold still 1.2 s | Reset view, close panel |
+| 🖐🖐 Two open palms, move apart / together | Explode / reassemble the shells |
+| 🖐🖐 Two open palms, twist | Roll (Z rotation) |
+| ✌️ Two fingers, move up / down | Slice plane at hand height (heals when the hand leaves) |
+| ☝️ Point in DRAW mode (tool strip on the right) | Draw on the surface; CLEAR erases |
 | 🙂 Move your head | Parallax |
 
-Mouse fallback: drag to rotate, wheel to zoom, click to touch, Esc to reset.
+Mouse/keys: drag rotate, shift-drag move, wheel zoom, alt-wheel explode, click to touch, `E` explode, `S` slice (`↑/↓`), `Q/W` roll, `D` draw mode, `Esc` reset.
 
 ## Edit the data
 

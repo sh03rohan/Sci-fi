@@ -21,7 +21,7 @@ export function createHUD(canvas) {
   function setStatus(key, on) { el[key].classList.toggle('on', on); el[key].textContent = el[key].textContent.replace(/[○●]/, on ? '●' : '○'); }
 
   function drawHand(h) {
-    const col = h.type === 'pinch' ? AMBER : h.type === 'point' ? GREEN : h.type === 'fist' ? PINK : GREEN;
+    const col = h.type === 'pinch' ? AMBER : h.type === 'fist' ? PINK : h.type === 'open' ? '#ffffff' : h.type === 'peace' ? CYAN : GREEN;
     ctx.save();
     ctx.shadowColor = col; ctx.shadowBlur = 10;
     ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.globalAlpha = 0.85;
@@ -76,7 +76,15 @@ export function createHUD(canvas) {
     ctx.restore();
   }
 
-  function draw({ hands, face, toScreen, cursor, zoomLine }) {
+  function drawHint(h) {
+    ctx.save(); ctx.strokeStyle = AMBER; ctx.fillStyle = AMBER; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(h.x, h.y, 30, 0, Math.PI * 2); ctx.globalAlpha = 0.35; ctx.stroke();
+    if (h.progress) { ctx.globalAlpha = 1; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(h.x, h.y, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * h.progress); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.font = '11px monospace'; ctx.textAlign = 'center'; ctx.fillText(h.label, h.x, h.y - 40);
+    ctx.restore();
+  }
+
+  function draw({ hands, face, toScreen, cursor, zoomLine, hint }) {
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     if (face) drawFace(face, toScreen);
     for (const h of hands) drawHand(h);
@@ -86,6 +94,7 @@ export function createHUD(canvas) {
       ctx.restore();
     }
     if (cursor) drawCursor(cursor);
+    if (hint) drawHint(hint);
 
     // FPS
     const now = performance.now(); fpsN++; fpsAcc += now - fpsLast; fpsLast = now;

@@ -69,14 +69,18 @@ function dotSphere(n = 1800) {
 
 function fresnelSphere(r, color, power, strength, side = THREE.FrontSide) {
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: color }, uPower: { value: power }, uStrength: { value: strength } },
-    vertexShader: `
+    uniforms: { uColor: { value: color.clone() }, uPower: { value: power }, uStrength: { value: strength } },
+    vertexShader: `#include <clipping_planes_pars_vertex>
       varying vec3 vN; varying vec3 vV;
-      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
-    fragmentShader: `
+      void main(){ vec4 mvPosition = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mvPosition.xyz); gl_Position = projectionMatrix*mvPosition;
+        #include <clipping_planes_vertex>
+      }`,
+    fragmentShader: `#include <clipping_planes_pars_fragment>
       uniform vec3 uColor; uniform float uPower; uniform float uStrength; varying vec3 vN; varying vec3 vV;
-      void main(){ float f = pow(1.0 - abs(dot(vN, vV)), uPower); gl_FragColor = vec4(uColor, f*uStrength + 0.02); }`,
-    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side,
+      void main(){
+        #include <clipping_planes_fragment>
+        float f = pow(1.0 - abs(dot(vN, vV)), uPower); gl_FragColor = vec4(uColor, f*uStrength + 0.02); }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side, clipping: true,
   });
   return new THREE.Mesh(new THREE.SphereGeometry(r, 64, 64), mat);
 }
@@ -177,9 +181,38 @@ export function createScene(canvas) {
 
   // State
   const state = {
-    rotX: 0.15, rotY: 0, velX: 0, velY: 0, scale: 1, targetScale: 1,
+    rotX: 0.15, rotY: 0, rotZ: 0, velX: 0, velY: 0, scale: 1, targetScale: 1,
     autoSpin: true, parallax: { x: 0, y: 0 }, pTarget: { x: 0, y: 0 }, hover: null,
+    explode: 0, targetExplode: 0,                          // 0..1 shells pushed outward
+    slice: null,                                           // null or world-space Y of the cut
+    offset: { x: 0, y: 0 }, targetOffset: { x: 0, y: 0 }, // grab & move
   };
+  const HOME = { x: root.position.x, y: root.position.y };
+  // slice: one clipping plane shared by every globe material
+  renderer.localClippingEnabled = true;
+  const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e6);
+  let clipApplied = 0;
+  const applyClip = () => { globe.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) m.clippingPlanes = [clipPlane]; }); clipApplied = globe.children.length; };
+  applyClip();
+  const sliceRing = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.6, 0, -1.6), new THREE.Vector3(1.6, 0, -1.6), new THREE.Vector3(1.6, 0, 1.6), new THREE.Vector3(-1.6, 0, 1.6)]), new THREE.LineBasicMaterial({ color: PINK, transparent: true, opacity: 0.8 }));
+  sliceRing.visible = false; root.add(sliceRing);
+  // explode: concentric shells scale apart, nodes drift outward
+  const shells = globe.children.filter((c) => !hotspots.some((h) => h.group === c)).map((c, i) => ({ obj: c, scale0: c.scale.clone(), k: 0.4 + (i % 4) * 0.35 }));
+  // annotation strokes (draw mode)
+  const strokes = []; let stroke = null;
+  function clearStrokes() { for (const l of strokes) { globe.remove(l); l.geometry.dispose(); } strokes.length = 0; stroke = null; }
+  function endStroke() { stroke = null; }
+  function drawPoint(local) {
+    const p = local.clone().multiplyScalar(1.015);
+    if (!stroke) {
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3000 * 3), 3)); geo.setDrawRange(0, 0);
+      stroke = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false })); stroke.userData.n = 0; globe.add(stroke); strokes.push(stroke);
+    }
+    const n = stroke.userData.n; if (n >= 3000) { stroke = null; return drawPoint(local); }
+    const a = stroke.geometry.attributes.position;
+    if (n > 0 && Math.hypot(a.getX(n - 1) - p.x, a.getY(n - 1) - p.y, a.getZ(n - 1) - p.z) < 0.01) return;
+    a.setXYZ(n, p.x, p.y, p.z); a.needsUpdate = true; stroke.userData.n = n + 1; stroke.geometry.setDrawRange(0, n + 1); stroke.geometry.computeBoundingSphere();
+  }
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
 
@@ -220,9 +253,21 @@ export function createScene(canvas) {
     state.rotY += state.velY * dt; state.rotX += state.velX * dt;
     state.rotX = clamp(state.rotX, -1.2, 1.2);
     if (!state.autoSpin) { state.velX *= Math.pow(0.08, dt); state.velY *= Math.pow(0.08, dt); }
-    globe.rotation.set(state.rotX, state.rotY, 0);
+    globe.rotation.set(state.rotX, state.rotY, state.rotZ);
     state.scale = lerp(state.scale, state.targetScale, 1 - Math.pow(0.001, dt));
     root.scale.setScalar(state.scale);
+    // grab & move
+    state.offset.x = lerp(state.offset.x, state.targetOffset.x, 1 - Math.pow(0.0005, dt));
+    state.offset.y = lerp(state.offset.y, state.targetOffset.y, 1 - Math.pow(0.0005, dt));
+    root.position.set(HOME.x + state.offset.x, HOME.y + state.offset.y, 0);
+    // explode view
+    state.explode = lerp(state.explode, state.targetExplode, 1 - Math.pow(0.002, dt));
+    for (const s of shells) s.obj.scale.copy(s.scale0).multiplyScalar(1 + state.explode * 0.3 * s.k);
+    for (const h of hotspots) h.group.position.copy(h.local).multiplyScalar(1 + state.explode * 0.22);
+    // slice plane (re-apply to objects added later, e.g. hotspots/arcs)
+    if (globe.children.length !== clipApplied) applyClip();
+    if (state.slice === null) { clipPlane.constant = 1e6; sliceRing.visible = false; }
+    else { clipPlane.constant = state.slice; sliceRing.visible = true; sliceRing.position.y = (state.slice - root.position.y) / state.scale; sliceRing.material.opacity = 0.5 + Math.sin(t * 6) * 0.3; }
     // Rings / decorations
     ringGroup.rotation.y += dt * 0.25; base2.rotation.y -= dt * 0.4;
     glow.material.opacity = 0.75 + Math.sin(t * 2) * 0.1;
@@ -244,9 +289,9 @@ export function createScene(canvas) {
     state.parallax.x = lerp(state.parallax.x, state.pTarget.x, 1 - Math.pow(0.01, dt));
     state.parallax.y = lerp(state.parallax.y, state.pTarget.y, 1 - Math.pow(0.01, dt));
     camera.position.x = state.parallax.x * 0.35; camera.position.y = state.parallax.y * 0.25;
-    camera.lookAt(root.position.x * 0.45, 0, 0);
+    camera.lookAt(HOME.x * 0.45, 0, 0);
     renderer.render(scene, camera);
   }
 
-  return { state, addHotspots, raycast, localToScreen, pulse, update, hotspots, resize };
+  return { state, camera, addHotspots, raycast, localToScreen, pulse, update, hotspots, resize, drawPoint, endStroke, clearStrokes };
 }
