@@ -7,6 +7,7 @@ import { createPanel } from './panel.js';
 import { createInteraction } from './interaction.js';
 import { createSound } from './sound.js';
 import { createTools } from './tools.js';
+import { createVoice } from './voice.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -69,12 +70,14 @@ async function boot() {
   const gestures = new GestureEngine(toScreen);
   let tools;
   const interaction = createInteraction({ scene, panel, hud, sound, tools: { hitTest: (x, y) => tools.hitTest(x, y), fire: (t) => tools.fire(t), setHover: (t, p) => tools.setHover(t, p) } });
-  tools = createTools({ container: $('tools'), interaction, scene, sound });
+  const voice = createVoice({ scene, interaction, panel, sound });
+  tools = createTools({ container: $('tools'), interaction, scene, sound, voice });
+  window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') voice.toggle(); });
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
   let injected = null; // debug hook: window.__holo.inject({hands,face})
-  window.__holo = { inject: (r) => (injected = r), scene, interaction };
+  window.__holo = { inject: (r) => (injected = r), scene, interaction, get voice() { return voice; } };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {

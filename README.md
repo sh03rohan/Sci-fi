@@ -31,6 +31,14 @@ click **START SYSTEM**. Allow camera access when asked.
 
 Mouse/keys: drag rotate, shift-drag move, wheel zoom, alt-wheel explode, click to touch, `E` explode, `S` slice (`↑/↓`), `Q/W` roll, `D` draw mode, `Esc` reset.
 
+## Voice
+
+Press `V` or the 🎤 VOICE tool (Chrome / Edge). Commands: “scan Tokyo” (any
+node name), “zoom in / out”, “explode” / “assemble”, “slice” / “heal”, “draw” /
+“clear”, “stop spinning” / “spin”, “close”, “reset”, “status”, “help”, “mute”.
+The system answers aloud and reads out any node you open by hand. Recognition
+and speech run in the browser's speech engine, outside the render loop.
+
 ## Edit the data
 
 `public/data/hotspots.json` holds every node on the globe (lat/lon, title,

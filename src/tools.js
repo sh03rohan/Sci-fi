@@ -1,9 +1,10 @@
 // Minimal tool strip (DRAW / CLEAR / RESET): plain DOM, selectable by click or by pointing and holding.
-export function createTools({ container, interaction, scene, sound }) {
+export function createTools({ container, interaction, scene, sound, voice }) {
   const defs = [
     { id: 'draw', label: '✎ DRAW', toggle: true, on: () => interaction.setMode('draw', true), off: () => interaction.setMode('draw', false) },
     { id: 'clear', label: '⌫ CLEAR', on: () => { scene.clearStrokes(); sound.close(); } },
     { id: 'reset', label: '↺ RESET', on: () => interaction.resetAll() },
+    { id: 'voice', label: '🎤 VOICE', toggle: true, on: () => { if (!voice.toggle()) sound.close(); }, off: () => voice.stop() },
   ];
   const list = [];
   for (const d of defs) {
@@ -14,7 +15,7 @@ export function createTools({ container, interaction, scene, sound }) {
   }
   let hovered = null, rectsAt = 0;
   function fire(t) {
-    if (t.d.toggle) { const on = !t.el.classList.contains('active'); t.el.classList.toggle('active', on); (on ? t.d.on : t.d.off)(); sound.confirm(); }
+    if (t.d.toggle) { const on = !t.el.classList.contains('active'); t.el.classList.toggle('active', on); (on ? t.d.on : t.d.off)(); if (t.d.id !== 'voice') sound.confirm(); }
     else { t.d.on(); t.el.classList.add('flash'); setTimeout(() => t.el.classList.remove('flash'), 300); }
   }
   function hitTest(x, y) {
@@ -25,6 +26,7 @@ export function createTools({ container, interaction, scene, sound }) {
     if (t !== hovered) { if (hovered) { hovered.el.classList.remove('hover'); hovered.prog.style.width = '0%'; } hovered = t; if (t) { t.el.classList.add('hover'); sound.tick(); } }
     if (t) t.prog.style.width = `${progress * 100}%`;
   }
-  function update() { list[0].el.classList.toggle('active', interaction.modes.draw); }
+  let n = 0;
+  function update() { if (n++ % 10) return; list[0].el.classList.toggle('active', interaction.modes.draw); list[3].el.classList.toggle('active', voice.active); list[3].el.classList.toggle('disabled', !voice.supported); }
   return { hitTest, fire, setHover, update };
 }
