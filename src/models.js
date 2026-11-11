@@ -19,7 +19,7 @@ export function fresnelSphere(r, color, power, strength, side = THREE.FrontSide)
     uniforms: { uColor: { value: color }, uPower: { value: power }, uStrength: { value: strength } },
     vertexShader: `#include <clipping_planes_pars_vertex>
       varying vec3 vN; varying vec3 vV;
-      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv;
+      void main(){ vec4 mvPosition = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mvPosition.xyz); gl_Position = projectionMatrix*mvPosition;
         #include <clipping_planes_vertex>
       }`,
     fragmentShader: `#include <clipping_planes_pars_fragment>
