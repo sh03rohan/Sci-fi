@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOLO-INTERFACE</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Layer 1: camera -->
+  <video id="cam" autoplay playsinline muted></video>
+  <div id="cam-tint"></div>
+
+  <!-- Layer 2: 3D hologram -->
+  <canvas id="gl"></canvas>
+
+  <!-- Layer 3: tracking overlay -->
+  <canvas id="overlay"></canvas>
+
+  <!-- Layer 4: HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-brand">◉ HOLO-INTERFACE <span>v1.0</span></div>
+      <div class="hud-status">
+        <span id="st-cam">CAM ○</span>
+        <span id="st-hand">HAND ○</span>
+        <span id="st-face">FACE ○</span>
+        <span id="st-fps">FPS --</span>
+      </div>
+    </div>
+
+    <div class="hud-left">
+      <div class="hud-block">
+        <div class="hud-label">GESTURE</div>
+        <div id="g-name" class="hud-value">NONE</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">MODEL</div>
+        <div class="hud-value">TERRA_WIRE</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">ROTATION</div>
+        <div id="g-rot" class="hud-value">X 000° Y 000°</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">ZOOM</div>
+        <div id="g-zoom" class="hud-value">1.00x</div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="hud-hint">☝ POINT &amp; HOLD → SCAN &nbsp;·&nbsp; 🤏 PINCH &amp; DRAG → ROTATE &nbsp;·&nbsp; 🤏🤏 TWO HANDS → ZOOM &nbsp;·&nbsp; ✊ FIST → RESET</div>
+    </div>
+
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+  </div>
+
+  <!-- Info panel -->
+  <div id="panel" class="hidden">
+    <div class="panel-head"><span id="p-title">—</span><button id="p-close">✕</button></div>
+    <div id="p-sub" class="panel-sub"></div>
+    <div id="p-rows" class="panel-rows"></div>
+    <div class="panel-bar"><div id="p-bar"></div></div>
+    <div class="panel-foot">✊ FIST OR HOLD ✕ TO CLOSE</div>
+  </div>
+  <svg id="connector"><line id="c-line" x1="0" y1="0" x2="0" y2="0"/><circle id="c-dot" r="3"/></svg>
+
+  <!-- Landing / boot -->
+  <div id="landing">
+    <div class="land-inner">
+      <div class="land-title">HOLO<span>·</span>INTERFACE</div>
+      <div class="land-sub">GESTURE-DRIVEN HOLOGRAPHIC CONSOLE</div>
+      <div id="boot-log" class="boot-log hidden"></div>
+      <button id="btn-start">▶ START SYSTEM</button>
+      <div class="land-note">Camera feed is processed on your device only. Nothing is uploaded.<br/>Sit in a well-lit room, about an arm's length from the camera.</div>
+    </div>
+    <div class="scan"></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
