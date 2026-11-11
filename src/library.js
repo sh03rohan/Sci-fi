@@ -5,7 +5,8 @@ import { instantiate } from './scene.js';
 export function createLibrary({ scene, container, defs, sound, targets }) {
   const slots = [];
   container.innerHTML = `<div class="lib-title">◈ MODEL LIBRARY <span>${defs.length} UNITS</span></div>`;
-  defs.forEach((def, i) => {
+  function addSlot(def) {
+    const i = slots.length;
     const el = document.createElement('div');
     el.className = 'lib-slot'; el.dataset.index = i;
     el.innerHTML = `<div class="lib-view"></div><div class="lib-meta"><div class="lib-name">${def.name}</div><div class="lib-tag">${def.tag}</div></div><div class="lib-idx">0${i + 1}</div><div class="lib-prog"><div></div></div>`;
@@ -16,7 +17,9 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
     cam.position.set(0, mini.radius * 0.55, mini.radius * 3.6); cam.lookAt(0, 0, 0);
     slots.push({ def, el, view: el.querySelector('.lib-view'), prog: el.querySelector('.lib-prog div'), mini, sc, cam, spin: 0 });
     targets.register(el, () => select(i), { progressEl: el.querySelector('.lib-prog div') });
-  });
+    container.querySelector('.lib-title span').textContent = `${slots.length} UNITS`;
+  }
+  defs.forEach(addSlot);
 
   let selected = -1;
   function select(i) {
@@ -27,7 +30,7 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
   }
   scene.onModelChange((def) => { selected = defs.indexOf(def); slots.forEach((s, k) => s.el.classList.toggle('selected', k === selected)); });
 
-  function step(dir) { const n = defs.length; select((((selected < 0 ? 0 : selected) + dir) % n + n) % n); }
+  function step(dir) { const n = slots.length; select((((selected < 0 ? 0 : selected) + dir) % n + n) % n); }
 
   function render(dt) {
     const r = scene.renderer, H = window.innerHeight, dpr = r.getPixelRatio();
@@ -47,5 +50,5 @@ export function createLibrary({ scene, container, defs, sound, targets }) {
     r.setScissorTest(false);
   }
 
-  return { select, step, render, get selected() { return selected; } };
+  return { select, step, render, addSlot, get selected() { return selected; } };
 }

@@ -6,10 +6,15 @@ const MODEL_WORDS = {
   car: ['car', 'vehicle', 'vector', 'auto', 'three', '3'],
   galaxy: ['galaxy', 'space', 'stars', 'star', 'nebula', 'four', '4'],
   dna: ['dna', 'helix', 'genome', 'gene', 'five', '5'],
+  heart: ['heart', 'cardio', 'cardiac', 'organ', 'six', '6'],
+  jet: ['jet', 'fighter', 'plane', 'aircraft', 'raptor', 'seven', '7'],
+  station: ['station', 'habitat', 'halo', 'orbital', 'eight', '8'],
+  atom: ['atom', 'atomic', 'element', 'gold', 'quantum', 'nine', '9'],
+  bioframe: ['skeleton', 'bioframe', 'bones', 'body', 'skeletal', 'ten', '10'],
 };
 const num = (s) => s.replace(/\b(\d+)\b/g, (m) => m.split('').join(' '));
 
-export function createVoice({ scene, library, interaction, panel, hud, sound }) {
+export function createVoice({ scene, library, interaction, panel, hud, sound, extras = {} }) {
   const st = scene.state;
   const el = {
     box: document.getElementById('voice'), state: document.getElementById('v-state'),
@@ -102,6 +107,10 @@ export function createVoice({ scene, library, interaction, panel, hud, sound }) 
     if (/\b(spin|rotate|turn)\b/.test(t)) { st.autoSpin = true; return say('Rotating.'); }
     if (/\b(close|dismiss|hide)\b/.test(t) && /panel|info|window|that|it/.test(t)) { panel.close(); return say('Closed.'); }
     if (/\b(reset|home|restore|default)\b/.test(t)) { interaction.resetAll(); return say('Interface reset.'); }
+    const tl = t.match(/\b(timeline|time|scrub)\b.*?(\d{1,3})/);
+    if (tl) { scene.setTime(parseInt(tl[2], 10) / 100); return say(`Timeline at ${tl[2]} percent.`); }
+    if (/\b(live|real[- ]?time|satellite|iss|earthquake)\b/.test(t) && /\b(off|stop|disable)\b/.test(t)) { extras.live?.stop(); return say('Live feed disabled.'); }
+    if (/\b(live|real[- ]?time|satellite|iss|earthquake)\b/.test(t)) { extras.live?.start(); if (cur?.def.id !== 'globe') library.select(scene.defs.findIndex((d) => d.id === 'globe')); return say('Live feed online. Tracking the station and seismic events.'); }
     if (/\b(status|report|sitrep|summary)\b/.test(t)) {
       const n = cur ? cur.hotspots.length : 0;
       return say(`${cur ? cur.def.name : 'No model'} on stage with ${n} registered nodes. Zoom ${st.scale.toFixed(1)}. All systems nominal.`);

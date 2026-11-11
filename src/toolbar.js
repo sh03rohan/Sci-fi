@@ -1,5 +1,5 @@
 // Bottom-right tool buttons, dwell-selectable like the library.
-export function createToolbar({ container, targets, interaction, scene, sound, voice }) {
+export function createToolbar({ container, targets, interaction, scene, sound, voice, live, glb }) {
   const st = scene.state;
   const defs = [
     { id: 'draw', label: '✎ DRAW', toggle: true, on: () => interaction.setMode('draw', true), off: () => interaction.setMode('draw', false) },
@@ -7,6 +7,9 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     { id: 'explode', label: '✣ EXPLODE', toggle: true, on: () => (st.targetExplode = 1), off: () => (st.targetExplode = 0) },
     { id: 'slice', label: '⊟ SLICE', toggle: true, on: () => (st.slice = 0.2), off: () => (st.slice = null) },
     { id: 'reset', label: '↺ RESET', on: () => interaction.resetAll() },
+    { id: 'time', label: '⏱ TIME', toggle: true, on: () => { interaction.setMode('time', true); document.getElementById('timeline').classList.remove('hidden'); }, off: () => { interaction.setMode('time', false); document.getElementById('timeline').classList.add('hidden'); } },
+    { id: 'live', label: '◉ LIVE', toggle: true, on: () => live.start(), off: () => live.stop() },
+    { id: 'load', label: '⬆ LOAD .GLB', on: () => glb.open() },
     { id: 'gaze', label: '◎ GAZE', toggle: true, on: () => interaction.setMode('gaze', true), off: () => interaction.setMode('gaze', false) },
     { id: 'voice', label: '🎤 VOICE', toggle: true, on: () => { if (!voice.toggle()) { /* unsupported */ } }, off: () => voice.stop() },
   ];
@@ -29,6 +32,8 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     buttons.draw.classList.toggle('active', interaction.modes.draw);
     buttons.voice.classList.toggle('active', voice.active);
     buttons.gaze.classList.toggle('active', interaction.modes.gaze);
+    buttons.time.classList.toggle('active', interaction.modes.time);
+    buttons.live.classList.toggle('active', live.active);
     buttons.voice.classList.toggle('disabled', !voice.supported);
   }
   return { update };

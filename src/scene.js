@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
 import { MODEL_BUILDERS, CYAN, PINK, fresnelSphere } from './models.js';
+import { MODEL_BUILDERS_2 } from './models2.js';
+
+const BUILDERS = { ...MODEL_BUILDERS, ...MODEL_BUILDERS_2 };
+export const registerBuilder = (id, fn) => (BUILDERS[id] = fn);
 
 function glowTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -21,7 +25,7 @@ function ring(radius, dashed, opacity) {
 
 // Builds a model instance + its hotspot markers. Used by the main stage and the library minis.
 export function instantiate(def, withHotspots = true) {
-  const m = MODEL_BUILDERS[def.id]();
+  const m = BUILDERS[def.id]();
   const hotspots = [];
   if (withHotspots) {
     const ringGeo = new THREE.RingGeometry(0.035, 0.045, 32);
@@ -75,6 +79,7 @@ export function createScene(canvas) {
     explode: 0, targetExplode: 0,           // 0..1 parts pushed outward
     slice: null,                            // null or world-space Y height of the cut
     offset: { x: 0, y: 0 }, targetOffset: { x: 0, y: 0 }, // grab & drag position
+    time: 0.5,                              // timeline scrubber 0..1
   };
   const HOME = { x: 1.05, y: 0 };
   renderer.localClippingEnabled = true;
@@ -97,6 +102,7 @@ export function createScene(canvas) {
     atmo.visible = def.id === 'globe';
     state.tiltLimit = current.tiltLimit ?? 1.2;
     state.explode = 0; state.targetExplode = 0; clearStrokes();
+    current.setTime?.(state.time);
     // explode parts: every direct child of the model group, pushed away from the model centre
     const box = new THREE.Box3().setFromObject(current.group); const centre = box.getCenter(new THREE.Vector3()); current.group.worldToLocal(centre);
     const hotGroups = new Set(current.hotspots.map((h) => h.group));
@@ -148,6 +154,7 @@ export function createScene(canvas) {
     stroke.userData.n = n + 1; stroke.geometry.setDrawRange(0, n + 1); stroke.geometry.computeBoundingSphere();
   }
   function setSlice(worldY) { state.slice = worldY; }
+  function setTime(k) { state.time = clamp(k, 0, 1); current?.setTime?.(state.time); }
   const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function raycast(sx, sy) {
     if (!current || transition) return null;
@@ -234,7 +241,7 @@ export function createScene(canvas) {
 
   return {
     state, renderer, camera, loadModels, select, onModelChange, raycast, localToScreen, pulse, update, resize,
-    drawPoint, endStroke, clearStrokes, setSlice, HOME,
+    drawPoint, endStroke, clearStrokes, setSlice, setTime, registerBuilder, HOME,
     get current() { return current; }, get defs() { return defs; }, get busy() { return !!transition; },
   };
 }

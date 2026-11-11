@@ -64,8 +64,15 @@
     </div>
 
     <div class="hud-bottom">
-      <div class="hud-hint">🎤 V → VOICE · 👁 BLINK×2 → SELECT · 😮 → ALERT · 🤨 → ZOOM · ☝ POINT+HOLD → SCAN / SELECT · 🤏 PINCH → ROTATE · 🤏🤏 → ZOOM · ✊ FIST → GRAB &amp; MOVE · 🖐 SWIPE → NEXT MODEL · 🖐 HOLD → RESET · 🖐🖐 APART → EXPLODE / TWIST → ROLL · ✌ → SLICE</div>
+      <div class="hud-hint">☝ HOLD → SELECT · 🤏 ROTATE · 🤏🤏 ZOOM · ✊ MOVE · 🖐 SWIPE / HOLD → RESET · 🖐🖐 EXPLODE / ROLL · ✌ SLICE · 👁👁 BLINK → SELECT · 🎤 V · ◎ G · ? FOR HELP</div>
     </div>
+
+    <div id="timeline" class="hidden">
+      <div class="tl-label">TIMELINE <span id="tl-val">50%</span></div>
+      <input id="tl-range" type="range" min="0" max="1000" value="500" />
+      <div class="tl-hint">🤏 PINCH &amp; DRAG LEFT/RIGHT TO SCRUB · [ / ] KEYS</div>
+    </div>
+    <div id="live-status"></div>
 
     <div id="idcard" class="hidden">
       <div class="id-head">OPERATOR-01</div>

@@ -23,7 +23,7 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
   let lastSwipe = 0, sliceHold = 0, sliceByHand = false, drawing = false;
   const mouse = { x: -1, y: -1, inside: false };
   let cursor = null, zoomLine = null;
-  const modes = { draw: false, gaze: false };
+  const modes = { draw: false, gaze: false, time: false };
   let lastFaceEvent = 0;
 
   const release = () => { drag = null; zoom = null; };
@@ -97,12 +97,19 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
       st.targetScale = clamp(zoom.startScale * (d / zoom.startDist), 0.5, 2.3);
       zoomLine = [pinching[0].pinch, pinching[1].pinch]; st.autoSpin = false;
     } else if (pinching.length === 1) {
-      gestureName = 'ROTATE'; zoom = null;
+      zoom = null;
       const p = pinching[0].pinch;
       if (!drag) drag = { last: { ...p } };
       const dx = p.x - drag.last.x, dy = p.y - drag.last.y; drag.last = { ...p };
-      st.rotY += dx * ROT_SENS; st.rotX += dy * ROT_SENS;
-      st.velY = dx * ROT_SENS * 30; st.velX = dy * ROT_SENS * 30; st.autoSpin = false;
+      if (modes.time) {
+        gestureName = 'SCRUB';
+        scene.setTime(st.time + dx / (window.innerWidth * 0.5));
+        hint = { x: p.x, y: p.y, label: `T ${Math.round(st.time * 100)}%`, progress: st.time };
+      } else {
+        gestureName = 'ROTATE';
+        st.rotY += dx * ROT_SENS; st.rotX += dy * ROT_SENS;
+        st.velY = dx * ROT_SENS * 30; st.velX = dy * ROT_SENS * 30; st.autoSpin = false;
+      }
     } else release();
 
     /* ---- grab & drag (fist) ---- */

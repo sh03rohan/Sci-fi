@@ -2,9 +2,11 @@
 
 Gesture-driven holographic console in the browser. Your webcam feed sits in the
 background, a holographic model floats in front of you, and you control it with
-your hands. A model library on the left holds five live wireframe models
-(planet, arcology city, vehicle schematic, galaxy, DNA helix); point at one to
-load it on the main stage. All tracking runs on your device; nothing is uploaded.
+your hands. A model library on the left holds ten live wireframe models
+(planet, arcology city, vehicle, galaxy, DNA helix, beating heart, fighter jet,
+space station, gold atom, skeletal bioframe) plus any .glb you drop in; point
+at one to load it on the main stage. All tracking runs on your device; nothing
+is uploaded (the optional LIVE layer fetches public ISS / USGS feeds).
 
 ## Run locally
 
@@ -37,6 +39,16 @@ click **START SYSTEM**. Allow camera access when asked.
 Keyboard: `1–5` models, `←/→` previous/next, `E` explode, `S` slice (`↑/↓` height),
 `Q/W` roll, `Esc` reset, `V` voice. Mouse: drag rotate, shift-drag move, wheel zoom,
 alt-wheel explode.
+
+## Content tools
+
+- **⬆ LOAD .GLB** (or drag a .glb/.gltf onto the page): the mesh is converted to
+  a glowing wireframe, auto-tagged with a few nodes and added to the library.
+- **◉ LIVE** (globe): tracks the ISS in real time (wheretheiss.at) and plots
+  the last 24 h of M2.5+ earthquakes (USGS) as touchable nodes with real data.
+- **⏱ TIME**: a timeline scrubber (slider, `[`/`]`, or pinch-drag left/right in
+  TIME mode). Each model reacts: heart rate, jet thrust, station spin, electron
+  energy, city day/night, car speed, galaxy age, DNA unzipping, globe traffic.
 
 ## Face & eyes
 

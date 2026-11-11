@@ -11,6 +11,8 @@ import { createTargets } from './targets.js';
 import { createToolbar } from './toolbar.js';
 import { createVoice } from './voice.js';
 import { createFaceState } from './face.js';
+import { createLive } from './live.js';
+import { createGlbImporter } from './glb.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -78,15 +80,21 @@ async function boot() {
   const gestures = new GestureEngine(toScreen);
   const faceState = createFaceState();
   const interaction = createInteraction({ scene, panel, hud, sound, library, targets });
-  const voice = createVoice({ scene, library, interaction, panel, hud, sound });
-  const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound, voice });
+  const live = createLive({ scene, sound, hud });
+  const glb = createGlbImporter({ scene, library, sound, onLog: (m) => voice?.say?.(m) });
+  const voice = createVoice({ scene, library, interaction, panel, hud, sound, extras: { live } });
+  const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound, voice, live, glb });
+  // timeline slider ↔ scene time
+  const tlRange = $('tl-range'), tlVal = $('tl-val');
+  tlRange.addEventListener('input', () => scene.setTime(tlRange.value / 1000));
+  window.addEventListener('keydown', (e) => { if (e.key === '[') scene.setTime(scene.state.time - 0.05); if (e.key === ']') scene.setTime(scene.state.time + 0.05); });
   window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') voice.toggle(); if (e.key === 'g' || e.key === 'G') interaction.setMode('gaze', !interaction.modes.gaze); });
   interaction.onFaceEvent = (ev) => { if (voice.active) voice.say(ev === 'mouthOpen' ? 'Alert acknowledged. Running threat scan.' : 'Zooming in.'); };
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
   let injected = null; // debug: window.__holo.inject({hands,face}) feeds synthetic landmarks
-  window.__holo = { inject: (r) => (injected = r), scene, library, interaction, voice };
+  window.__holo = { inject: (r) => (injected = r), scene, library, interaction, voice, live, glb };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {
@@ -108,7 +116,8 @@ async function boot() {
 
     const fm = faceState.update(face, toScreen, now); window.__holo.fm = fm;
     const { cursor, zoomLine, hint } = interaction.update(hands, face, now, fm);
-    toolbar.update();
+    toolbar.update(); live.update(dt);
+    if (Math.abs(tlRange.value / 1000 - scene.state.time) > 0.002) { tlRange.value = Math.round(scene.state.time * 1000); tlVal.textContent = `${Math.round(scene.state.time * 100)}%`; }
     scene.update(dt);
     library.render(dt);
     panel.update(scene.localToScreen);
