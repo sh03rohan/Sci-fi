@@ -9,6 +9,7 @@ import { createSound } from './sound.js';
 import { createLibrary } from './library.js';
 import { createTargets } from './targets.js';
 import { createToolbar } from './toolbar.js';
+import { createVoice } from './voice.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -75,12 +76,14 @@ async function boot() {
   const toScreen = makeVideoMapper(video);
   const gestures = new GestureEngine(toScreen);
   const interaction = createInteraction({ scene, panel, hud, sound, library, targets });
-  const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound });
+  const voice = createVoice({ scene, library, interaction, panel, hud, sound });
+  const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound, voice });
+  window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') voice.toggle(); });
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
   let injected = null; // debug: window.__holo.inject({hands,face}) feeds synthetic landmarks
-  window.__holo = { inject: (r) => (injected = r), scene, library, interaction };
+  window.__holo = { inject: (r) => (injected = r), scene, library, interaction, voice };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {

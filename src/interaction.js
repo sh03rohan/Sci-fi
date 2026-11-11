@@ -20,7 +20,7 @@ const ROT_SENS = 0.011;
 export function createInteraction({ scene, panel, hud, sound, library, targets }) {
   const st = scene.state;
   let drag = null, zoom = null, dwell = null, grab = null, twoOpen = null, openHold = null, lastHover = null;
-  let lastSwipe = 0, sliceHold = 0, drawing = false;
+  let lastSwipe = 0, sliceHold = 0, sliceByHand = false, drawing = false;
   const mouse = { x: -1, y: -1, inside: false };
   let cursor = null, zoomLine = null;
   const modes = { draw: false };
@@ -153,11 +153,11 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
       // palm height → world Y at the hologram
       const ndcY = 1 - (p.y / window.innerHeight) * 2;
       const worldY = ndcY * scene.camera.position.z * Math.tan(THREE.MathUtils.degToRad(scene.camera.fov / 2));
-      st.slice = clamp(worldY, -1.6, 1.6); sliceHold = now;
+      st.slice = clamp(worldY, -1.6, 1.6); sliceHold = now; sliceByHand = true;
       hint = { x: p.x, y: p.y, label: `SLICE ${st.slice.toFixed(2)}` };
-    } else if (st.slice !== null && now - sliceHold > 2500) {
-      st.slice = null; // auto-heal a couple of seconds after the hand leaves
-    }
+    } else if (sliceByHand && st.slice !== null && now - sliceHold > 2500) {
+      st.slice = null; sliceByHand = false; // auto-heal a couple of seconds after the hand leaves
+    } else if (st.slice === null) sliceByHand = false;
 
     /* ---- pointer ---- */
     if (!pinching.length && pointing) { gestureName = modes.draw ? 'DRAW' : 'POINT'; handlePointer(pointing.tip, now); }

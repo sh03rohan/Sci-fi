@@ -7,7 +7,7 @@ export function createPanel() {
   const closeBtn = document.getElementById('p-close');
 
   let anchorLocal = null; // THREE.Vector3 in globe-local space
-  let onClose = () => {};
+  let onClose = () => {}, onOpen = () => {};
   closeBtn.addEventListener('click', () => close());
 
   function open(info, local) {
@@ -17,6 +17,7 @@ export function createPanel() {
     rows.innerHTML = Object.entries(info.data).map(([k, v]) => `<div class="row"><span>${k}</span><span>${v}</span></div>`).join('');
     panel.classList.remove('hidden'); svg.style.display = 'block';
     bar.style.transition = 'none'; bar.style.width = '0%'; void bar.offsetWidth; bar.style.transition = ''; bar.style.width = `${info.level ?? 50}%`;
+    onOpen(info);
   }
   function close() {
     if (panel.classList.contains('hidden')) return;
@@ -40,5 +41,5 @@ export function createPanel() {
     panel.style.opacity = op; svg.style.opacity = op;
   }
 
-  return { open, close, isOpen, update, set onClose(fn) { onClose = fn; } };
+  return { open, close, isOpen, update, set onClose(fn) { onClose = fn; }, set onOpen(fn) { onOpen = fn; } };
 }

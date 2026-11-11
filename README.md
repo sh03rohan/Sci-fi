@@ -25,7 +25,26 @@ click **START SYSTEM**. Allow camera access when asked.
 | 🤏 Pinch (thumb + index) and drag | Rotate the globe (with inertia) |
 | 🤏🤏 Pinch with both hands, move apart / together | Zoom |
 | ✊ Fist, hold 0.5 s | Reset view, close panel |
+| ✊ Fist and move | Grab and move the hologram |
+| 🖐 Open palm, quick swipe left/right | Previous / next model |
+| 🖐 Open palm, hold still 1.2 s | Reset view |
+| 🖐🖐 Two open palms, move apart / together | Explode / reassemble the model |
+| 🖐🖐 Two open palms, twist | Roll (Z rotation) |
+| ✌️ Two fingers, move up / down | Slice plane (cross-section) at hand height |
+| ☝️ Point in DRAW mode (TOOLS panel) | Annotate the surface |
 | 🙂 Move your head | Parallax |
+
+Keyboard: `1–5` models, `←/→` previous/next, `E` explode, `S` slice (`↑/↓` height),
+`Q/W` roll, `Esc` reset, `V` voice. Mouse: drag rotate, shift-drag move, wheel zoom,
+alt-wheel explode.
+
+## Voice
+
+Press `V` or the 🎤 VOICE tool (Chrome/Edge). Commands: “open galaxy”, “show the
+car”, “next model”, “scan Tokyo”, “scan the sensor dome” (switches model if
+needed), “zoom in/out”, “explode” / “assemble”, “slice” / “heal”, “draw” /
+“clear”, “stop spinning”, “reset”, “status”, “help”, “mute”. The system
+answers aloud with speech synthesis and reads out any node you open.
 
 Mouse fallback: drag to rotate, wheel to zoom, click to touch, click a library slot (or keys 1–5) to switch model, Esc to reset.
 
