@@ -10,6 +10,7 @@ import { createLibrary } from './library.js';
 import { createTargets } from './targets.js';
 import { createToolbar } from './toolbar.js';
 import { createVoice } from './voice.js';
+import { createFaceState } from './face.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -75,10 +76,12 @@ async function boot() {
 
   const toScreen = makeVideoMapper(video);
   const gestures = new GestureEngine(toScreen);
+  const faceState = createFaceState();
   const interaction = createInteraction({ scene, panel, hud, sound, library, targets });
   const voice = createVoice({ scene, library, interaction, panel, hud, sound });
   const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound, voice });
-  window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') voice.toggle(); });
+  window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') voice.toggle(); if (e.key === 'g' || e.key === 'G') interaction.setMode('gaze', !interaction.modes.gaze); });
+  interaction.onFaceEvent = (ev) => { if (voice.active) voice.say(ev === 'mouthOpen' ? 'Alert acknowledged. Running threat scan.' : 'Zooming in.'); };
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
@@ -103,12 +106,13 @@ async function boot() {
     hud.setStatus('hand', now - handSeen < 300);
     hud.setStatus('face', now - faceSeen < 500);
 
-    const { cursor, zoomLine, hint } = interaction.update(hands, face, now);
+    const fm = faceState.update(face, toScreen, now); window.__holo.fm = fm;
+    const { cursor, zoomLine, hint } = interaction.update(hands, face, now, fm);
     toolbar.update();
     scene.update(dt);
     library.render(dt);
     panel.update(scene.localToScreen);
-    hud.draw({ hands, face, toScreen, cursor, zoomLine, hint, dt });
+    hud.draw({ hands, face, fm, toScreen, cursor, zoomLine, hint, dt });
   }
   loop();
 }

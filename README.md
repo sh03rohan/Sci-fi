@@ -38,6 +38,14 @@ Keyboard: `1–5` models, `←/→` previous/next, `E` explode, `S` slice (`↑/
 `Q/W` roll, `Esc` reset, `V` voice. Mouse: drag rotate, shift-drag move, wheel zoom,
 alt-wheel explode.
 
+## Face & eyes
+
+An operator ID card locks onto your face (IDENTIFYING… → AUTHENTICATED) and a
+gaze reticle estimates where you look from the irises. `G` / the ◎ GAZE tool
+makes the reticle the pointer when no hand is visible. Double-blink selects at
+the current cursor, holding your mouth open fires an alert, raising your
+eyebrows zooms in a step.
+
 ## Voice
 
 Press `V` or the 🎤 VOICE tool (Chrome/Edge). Commands: “open galaxy”, “show the

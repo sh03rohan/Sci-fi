@@ -23,7 +23,12 @@ export function createHUD(canvas) {
   function resize() { const dpr = Math.min(window.devicePixelRatio, 2); canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
   window.addEventListener('resize', resize); resize();
 
-  let fpsAcc = 0, fpsN = 0, fpsLast = performance.now(), blinkCount = 0, eyesWereClosed = false;
+  let fpsAcc = 0, fpsN = 0, fpsLast = performance.now();
+  const idCard = $('idcard');
+  const idEl = { status: $('id-status'), bar: $('id-bar'), yaw: $('id-yaw'), expr: $('id-expr') };
+  let gazeActive = false;
+  const alertEl = $('alert');
+  function alert(msg) { alertEl.querySelector('span').textContent = msg; alertEl.classList.remove('hidden'); alertEl.classList.remove('go'); void alertEl.offsetWidth; alertEl.classList.add('go'); setTimeout(() => alertEl.classList.add('hidden'), 2200); }
   let t = 0;
 
   const setStatus = (key, on) => { el[key].classList.toggle('on', on); el[key].textContent = el[key].textContent.replace(/[○●]/, on ? '●' : '○'); };
@@ -76,17 +81,7 @@ export function createHUD(canvas) {
   }
 
   /* ------------ FACE ------------ */
-  function faceMetrics(f, toScreen) {
-    const S = (i) => toScreen(f[i].x, f[i].y);
-    const ear = (top, bot, outer, inner) => dist(S(top), S(bot)) / (dist(S(outer), S(inner)) || 1);
-    const eyeL = clamp((ear(159, 145, 33, 133) - 0.08) / 0.25, 0, 1);   // user's left eye (appears right on mirrored screen)
-    const eyeR = clamp((ear(386, 374, 263, 362) - 0.08) / 0.25, 0, 1);
-    const mouth = clamp((dist(S(13), S(14)) / (dist(S(61), S(291)) || 1) - 0.02) / 0.6, 0, 1);
-    const yaw = clamp(((f[1].x - f[234].x) / ((f[454].x - f[234].x) || 1e-3) - 0.5) * -2, -1, 1);
-    const pitch = clamp(((f[1].y - f[10].y) / ((f[152].y - f[10].y) || 1e-3) - 0.55) * -3, -1, 1);
-    return { eyeL, eyeR, mouth, yaw, pitch };
-  }
-  function drawFace(face, toScreen) {
+  function drawFace(face, toScreen, m) {
     const S = (i) => toScreen(face[i].x, face[i].y);
     // faint tesselation
     ctx.save(); ctx.strokeStyle = CYAN; ctx.globalAlpha = 0.08; ctx.lineWidth = 0.5; ctx.beginPath();
@@ -112,7 +107,6 @@ export function createHUD(canvas) {
     let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     for (const c of F.FACE_LANDMARKS_FACE_OVAL) { const p = S(c.start); minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
     const pad = 22; bracket(minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2, CYAN, 24, 2);
-    const m = faceMetrics(face, toScreen);
     ctx.save();
     ctx.fillStyle = CYAN; ctx.globalAlpha = 0.18; ctx.fillRect(minX - pad, minY - pad - 24, 190, 20);
     ctx.globalAlpha = 1; text(`FACE LOCKED · 478 PTS`, minX - pad + 6, minY - pad - 10, CYAN, 11);
@@ -126,6 +120,23 @@ export function createHUD(canvas) {
     callout(lip.x, lip.y, `MOUTH ${Math.round(m.mouth * 100)}%`, PINK, -1, 60, 26);
     // tracking cross on the forehead
     const fh = S(10); ctx.save(); glowStroke(CYAN, 1, 4, 0.7); ctx.beginPath(); ctx.moveTo(fh.x - 8, fh.y - 10); ctx.lineTo(fh.x + 8, fh.y - 10); ctx.moveTo(fh.x, fh.y - 18); ctx.lineTo(fh.x, fh.y - 2); ctx.stroke(); ctx.restore();
+    // operator ID card beside the face (screen-right of the bracket)
+    const card = idCard, cw = 196, right = maxX + pad + 26 + cw < window.innerWidth;
+    card.style.left = `${right ? maxX + pad + 26 : minX - pad - 26 - cw}px`; card.style.top = `${minY - pad}px`; card.classList.remove('hidden');
+    const idProg = clamp(m.lockedMs / 2200, 0, 1);
+    if (idProg < 1) { card.classList.add('scanning'); idEl.status.textContent = `IDENTIFYING… ${Math.round(idProg * 100)}%`; idEl.bar.style.width = `${idProg * 100}%`; }
+    else { card.classList.remove('scanning'); idEl.status.textContent = 'AUTHENTICATED'; idEl.bar.style.width = '100%'; }
+    idEl.yaw.textContent = `${m.yaw >= 0 ? 'L' : 'R'}${Math.abs(m.yaw * 45).toFixed(0)}° / ${m.pitch >= 0 ? 'U' : 'D'}${Math.abs(m.pitch * 30).toFixed(0)}°`;
+    idEl.expr.textContent = m.mouth > 0.55 ? 'VOCAL' : m.browRaise ? 'ALERT' : (m.eyeL < 0.25 && m.eyeR < 0.25) ? 'BLINK' : 'NEUTRAL';
+    ctx.save(); glowStroke(CYAN, 1, 4, 0.6); ctx.setLineDash([4, 4]); ctx.beginPath();
+    ctx.moveTo(right ? maxX + pad : minX - pad, minY - pad + 12); ctx.lineTo(right ? maxX + pad + 26 : minX - pad - 26, minY - pad + 12); ctx.stroke(); ctx.restore();
+    // gaze reticle
+    if (m.gaze) {
+      const g = m.gaze; ctx.save(); glowStroke(gazeActive ? WHITE : CYAN, 1, 8, gazeActive ? 0.9 : 0.45);
+      ctx.beginPath(); ctx.arc(g.x, g.y, 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(g.x - 26, g.y); ctx.lineTo(g.x - 10, g.y); ctx.moveTo(g.x + 10, g.y); ctx.lineTo(g.x + 26, g.y); ctx.moveTo(g.x, g.y - 26); ctx.lineTo(g.x, g.y - 10); ctx.moveTo(g.x, g.y + 10); ctx.lineTo(g.x, g.y + 26); ctx.stroke();
+      text(gazeActive ? 'GAZE · ACTIVE' : 'GAZE', g.x + 24, g.y - 22, gazeActive ? WHITE : CYAN, 9); ctx.restore();
+    }
     return m;
   }
 
@@ -152,11 +163,11 @@ export function createHUD(canvas) {
     ctx.restore();
   }
 
-  function draw({ hands, face, toScreen, cursor, zoomLine, hint, dt }) {
+  function draw({ hands, face, fm, toScreen, cursor, zoomLine, hint, dt }) {
     t += dt || 0.016;
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     let m = null;
-    if (face) m = drawFace(face, toScreen);
+    if (face && fm?.present) m = drawFace(face, toScreen, fm); else idCard.classList.add('hidden');
     for (const h of hands) drawHand(h);
     if (zoomLine) {
       ctx.save(); glowStroke(AMBER, 1.5, 6, 0.8); ctx.setLineDash([6, 6]);
@@ -169,13 +180,10 @@ export function createHUD(canvas) {
 
     // Biometrics panel
     if (m) {
-      const closed = m.eyeL < 0.25 && m.eyeR < 0.25;
-      if (closed && !eyesWereClosed) blinkCount++;
-      eyesWereClosed = closed;
       el.yaw.textContent = `${m.yaw >= 0 ? 'L' : 'R'} ${Math.abs(m.yaw * 45).toFixed(0)}°`;
       el.pitch.textContent = `${m.pitch >= 0 ? 'UP' : 'DN'} ${Math.abs(m.pitch * 30).toFixed(0)}°`;
       el.eyeL.style.width = `${m.eyeL * 100}%`; el.eyeR.style.width = `${m.eyeR * 100}%`; el.mouth.style.width = `${m.mouth * 100}%`;
-      el.blink.textContent = String(blinkCount).padStart(3, '0');
+      el.blink.textContent = String(m.blinkCount).padStart(3, '0');
     }
     el.hands.textContent = hands.length ? hands.map((h) => `${h.label === 'Left' ? 'R' : 'L'}:${h.type.toUpperCase()}`).join('  ') : '— NONE —';
 
@@ -189,5 +197,5 @@ export function createHUD(canvas) {
   const setModel = (name) => (el.model.textContent = name);
   const exEl = $('g-explode');
   const setExplode = (v) => { if (exEl) exEl.textContent = `${Math.round(v * 100)}%`; };
-  return { draw, setStatus, setGesture, setRot, setZoom, setModel, setExplode };
+  return { draw, setStatus, setGesture, setRot, setZoom, setModel, setExplode, alert, setGazeActive: (v) => (gazeActive = v) };
 }

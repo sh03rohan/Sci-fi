@@ -7,6 +7,7 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     { id: 'explode', label: '✣ EXPLODE', toggle: true, on: () => (st.targetExplode = 1), off: () => (st.targetExplode = 0) },
     { id: 'slice', label: '⊟ SLICE', toggle: true, on: () => (st.slice = 0.2), off: () => (st.slice = null) },
     { id: 'reset', label: '↺ RESET', on: () => interaction.resetAll() },
+    { id: 'gaze', label: '◎ GAZE', toggle: true, on: () => interaction.setMode('gaze', true), off: () => interaction.setMode('gaze', false) },
     { id: 'voice', label: '🎤 VOICE', toggle: true, on: () => { if (!voice.toggle()) { /* unsupported */ } }, off: () => voice.stop() },
   ];
   container.innerHTML = `<div class="tb-title">◈ TOOLS</div>`;
@@ -27,6 +28,7 @@ export function createToolbar({ container, targets, interaction, scene, sound, v
     buttons.slice.classList.toggle('active', st.slice !== null);
     buttons.draw.classList.toggle('active', interaction.modes.draw);
     buttons.voice.classList.toggle('active', voice.active);
+    buttons.gaze.classList.toggle('active', interaction.modes.gaze);
     buttons.voice.classList.toggle('disabled', !voice.supported);
   }
   return { update };

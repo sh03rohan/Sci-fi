@@ -23,7 +23,8 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
   let lastSwipe = 0, sliceHold = 0, sliceByHand = false, drawing = false;
   const mouse = { x: -1, y: -1, inside: false };
   let cursor = null, zoomLine = null;
-  const modes = { draw: false };
+  const modes = { draw: false, gaze: false };
+  let lastFaceEvent = 0;
 
   const release = () => { drag = null; zoom = null; };
   function resetAll() {
@@ -80,7 +81,7 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
     cursor = { x: p.x, y: p.y, progress: dwell.fired ? 0 : prog, active: true, hover: !!hover };
   }
 
-  function update(hands, face, now) {
+  function update(hands, face, now, fm = null) {
     cursor = null; zoomLine = null;
     const by = (t) => hands.filter((h) => h.type === t);
     const pinching = by('pinch'), open = by('open'), fists = by('fist'), peace = by('peace');
@@ -163,7 +164,19 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
     if (!pinching.length && pointing) { gestureName = modes.draw ? 'DRAW' : 'POINT'; handlePointer(pointing.tip, now); }
     else if (!pointing) { dwell = null; st.hover = null; targets.setHover(null); if (drawing) { scene.endStroke(); drawing = false; } }
 
-    if (hands.length === 0 && mouse.inside && !mDraw) handlePointer(mouse, now);
+    // gaze pointer when no hands are visible
+    if (hands.length === 0 && modes.gaze && fm?.gaze) { gestureName = 'GAZE'; handlePointer(fm.gaze, now); }
+    else if (hands.length === 0 && mouse.inside && !mDraw) handlePointer(mouse, now);
+
+    // face events: double blink = click at the current cursor, mouth open = alert, brow raise = zoom step
+    if (fm?.events?.length && now - lastFaceEvent > 400) {
+      lastFaceEvent = now;
+      for (const ev of fm.events) {
+        if (ev === 'doubleBlink') { const at = cursor || (modes.gaze && fm.gaze) || (mouse.inside ? mouse : null); if (at) { handlePointer({ x: at.x, y: at.y }, now, true); hud.alert('BLINK SELECT'); } }
+        else if (ev === 'mouthOpen') { hud.alert('⚠ VOCAL ALERT · THREAT SCAN'); sound.confirm(); st.autoSpin = false; onFaceEvent('mouthOpen'); }
+        else if (ev === 'browRaise') { st.targetScale = clamp(st.targetScale * 1.18, 0.5, 2.3); hud.alert('BROW RAISE · ZOOM'); sound.tick(); onFaceEvent('browRaise'); }
+      }
+    }
 
     if (face) { st.pTarget.x = clamp((0.5 - face[1].x) * 2, -1, 1); st.pTarget.y = clamp((0.5 - face[1].y) * 2, -1, 1); }
     else { st.pTarget.x = 0; st.pTarget.y = 0; }
@@ -173,7 +186,8 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
     return { cursor, zoomLine, hint };
   }
 
-  function setMode(name, on) { modes[name] = on; if (!on && name === 'draw') scene.endStroke(); }
+  let onFaceEvent = () => {};
+  function setMode(name, on) { modes[name] = on; if (!on && name === 'draw') scene.endStroke(); if (name === 'gaze') hud.setGazeActive(on); }
 
   // ---------- mouse fallback ----------
   let mDrag = null, mDraw = false;
@@ -213,5 +227,5 @@ export function createInteraction({ scene, panel, hud, sound, library, targets }
     const n = parseInt(e.key, 10); if (n >= 1 && n <= scene.defs.length) library.select(n - 1);
   });
 
-  return { update, setMode, modes, resetAll };
+  return { update, setMode, modes, resetAll, set onFaceEvent(fn) { onFaceEvent = fn; } };
 }

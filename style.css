@@ -183,3 +183,24 @@ html, body {
 #v-said.flash { animation: said-in 0.4s ease-out; }
 @keyframes said-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .tb-btn.disabled { opacity: 0.35; }
+
+
+/* ---------- operator ID card ---------- */
+#idcard { position: absolute; width: 196px; padding: 8px 10px; border: 1px solid var(--cyan); background: rgba(0,12,18,0.7); font-size: 10px; letter-spacing: 0.08em; box-shadow: 0 0 14px var(--cyan-dim); }
+#idcard.scanning { border-style: dashed; }
+.id-head { font-size: 12px; letter-spacing: 0.25em; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--cyan-dim); }
+.id-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.id-row span { opacity: 0.55; } .id-row b { font-weight: 400; color: var(--green); }
+.id-bar { height: 3px; background: rgba(255,255,255,0.08); margin: 6px 0 4px; }
+.id-bar div { height: 100%; width: 0; background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.id-status { font-size: 9px; letter-spacing: 0.2em; color: var(--green); }
+#idcard.scanning .id-status { color: var(--amber); animation: blink 0.6s step-end infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+/* ---------- alert flash ---------- */
+#alert { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: flex-start; justify-content: center; padding-top: 110px; }
+#alert span { font-size: 16px; letter-spacing: 0.35em; color: var(--pink); border: 1px solid var(--pink); padding: 8px 22px; background: rgba(40,0,10,0.6); text-shadow: 0 0 12px var(--pink); }
+#alert.go { animation: alert-in 2.2s ease-out forwards; }
+#alert.go::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 140px rgba(255,61,113,0.55); animation: vign 2.2s ease-out forwards; }
+@keyframes alert-in { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes vign { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
