@@ -84,7 +84,7 @@ export function createHUD(canvas) {
     ctx.restore();
   }
 
-  function draw({ hands, face, toScreen, cursor, zoomLine, hint }) {
+  function draw({ hands, face, toScreen, cursor, zoomLine, hint, extra }) {
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     if (face) drawFace(face, toScreen);
     for (const h of hands) drawHand(h);
@@ -95,6 +95,7 @@ export function createHUD(canvas) {
     }
     if (cursor) drawCursor(cursor);
     if (hint) drawHint(hint);
+    if (extra) extra(ctx);
 
     // FPS
     const now = performance.now(); fpsN++; fpsAcc += now - fpsLast; fpsLast = now;

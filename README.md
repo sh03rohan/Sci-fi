@@ -39,6 +39,15 @@ node name), “zoom in / out”, “explode” / “assemble”, “slice” / �
 The system answers aloud and reads out any node you open by hand. Recognition
 and speech run in the browser's speech engine, outside the render loop.
 
+## Target practice (mini game)
+
+Press `G`, the 🎯 GAME tool, or say “start game”. Targets appear around the
+screen for 60 seconds. Aim with your index finger (a crosshair follows it),
+raise your thumb to arm, and flick the thumb down to fire — a finger gun.
+Hits score 10 (bonus targets 50) plus combo and precision bonuses; targets
+drift, fade and respawn elsewhere. Mouse click / space also fire. Best score
+is remembered in the browser.
+
 ## Edit the data
 
 `public/data/hotspots.json` holds every node on the globe (lat/lon, title,

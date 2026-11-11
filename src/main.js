@@ -8,6 +8,7 @@ import { createInteraction } from './interaction.js';
 import { createSound } from './sound.js';
 import { createTools } from './tools.js';
 import { createVoice } from './voice.js';
+import { createGame } from './game.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -68,16 +69,17 @@ async function boot() {
 
   const toScreen = makeVideoMapper(video);
   const gestures = new GestureEngine(toScreen);
-  let tools;
-  const interaction = createInteraction({ scene, panel, hud, sound, tools: { hitTest: (x, y) => tools.hitTest(x, y), fire: (t) => tools.fire(t), setHover: (t, p) => tools.setHover(t, p) } });
-  const voice = createVoice({ scene, interaction, panel, sound });
-  tools = createTools({ container: $('tools'), interaction, scene, sound, voice });
+  let tools, voice;
+  const game = createGame({ sound, hud, get voice() { return voice; } });
+  const interaction = createInteraction({ scene, panel, hud, sound, game, tools: { hitTest: (x, y) => tools.hitTest(x, y), fire: (t) => tools.fire(t), setHover: (t, p) => tools.setHover(t, p) } });
+  voice = createVoice({ scene, interaction, panel, sound, game });
+  tools = createTools({ container: $('tools'), interaction, scene, sound, voice, game });
   window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') voice.toggle(); });
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
   let injected = null; // debug hook: window.__holo.inject({hands,face})
-  window.__holo = { inject: (r) => (injected = r), scene, interaction, get voice() { return voice; } };
+  window.__holo = { inject: (r) => (injected = r), scene, interaction, game, get voice() { return voice; } };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {
@@ -101,7 +103,8 @@ async function boot() {
     tools.update();
     scene.update(dt);
     panel.update(scene.localToScreen);
-    hud.draw({ hands, face, toScreen, cursor, zoomLine, hint });
+    game.update(dt, now);
+    hud.draw({ hands, face, toScreen, cursor, zoomLine, hint, extra: game.active ? game.render : null });
   }
   loop();
 }

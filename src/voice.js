@@ -1,6 +1,6 @@
 // Voice commands (Web Speech API) + spoken replies (speech synthesis).
 // Runs entirely in the browser, off the render loop. Chrome / Edge support recognition.
-export function createVoice({ scene, interaction, panel, sound }) {
+export function createVoice({ scene, interaction, panel, sound, game }) {
   const st = scene.state;
   const el = { box: document.getElementById('voice'), state: document.getElementById('v-state'), heard: document.getElementById('v-heard'), said: document.getElementById('v-said') };
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -41,6 +41,8 @@ export function createVoice({ scene, interaction, panel, sound }) {
     const t = raw.toLowerCase().trim();
     el.heard.textContent = `“${raw.trim()}”`;
 
+    if (/\b(stop|end|quit|exit)\b.*\b(game|practice|round)\b/.test(t)) { game.stop(); return say('Ending the round.'); }
+    if (/\b(start|play|begin|launch|again)\b.*\b(game|practice|round|again)\b|\bplay again\b|\btarget practice\b/.test(t)) { game.start(); return; }
     if (/\b(scan|analy[sz]e|inspect|target|lock|open|show)\b/.test(t)) {
       const h = hotspotFrom(t);
       if (h) { scene.pulse(h.local); panel.open(h.data, h.local); st.autoSpin = false; return say(`${h.data.title.replace(/·/g, ',')} locked. ${h.data.subtitle || ''}`); }
@@ -64,7 +66,7 @@ export function createVoice({ scene, interaction, panel, sound }) {
     if (/\b(thank|thanks)\b/.test(t)) return say('Anytime.');
     if (/\b(mute|quiet|silence)\b/.test(t)) { muted = true; el.said.textContent = 'VOICE OUTPUT MUTED'; return; }
     if (/\b(unmute|speak)\b/.test(t)) { muted = false; return say('Voice output restored.'); }
-    if (/\b(help|commands|what can you do)\b/.test(t)) return say('Try: scan Tokyo, zoom in, explode, assemble, slice, heal, draw, clear, stop spinning, reset, or status.');
+    if (/\b(help|commands|what can you do)\b/.test(t)) return say('Try: scan Tokyo, zoom in, explode, assemble, slice, heal, draw, clear, stop spinning, reset, status, or start game.');
     el.said.textContent = '— no matching command —';
   }
 

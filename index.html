@@ -49,7 +49,7 @@
     </div>
 
     <div class="hud-bottom">
-      <div class="hud-hint">🎤 V → VOICE · ☝ HOLD → SCAN · 🤏 ROTATE · 🤏🤏 ZOOM · ✊ GRAB &amp; MOVE · 🖐 HOLD → RESET · 🖐🖐 APART → EXPLODE / TWIST → ROLL · ✌ SLICE</div>
+      <div class="hud-hint">🎯 G → GAME · 🎤 V → VOICE · ☝ HOLD → SCAN · 🤏 ROTATE · 🤏🤏 ZOOM · ✊ GRAB &amp; MOVE · 🖐 HOLD → RESET · 🖐🖐 APART → EXPLODE / TWIST → ROLL · ✌ SLICE</div>
     </div>
 
     <div id="voice" class="off">
@@ -59,6 +59,19 @@
     </div>
 
     <div id="tools"></div>
+
+    <!-- target practice -->
+    <div id="game" class="hidden">
+      <div class="g-hud">
+        <div><span>SCORE</span><b id="g-score">0000</b></div>
+        <div><span>TIME</span><b id="g-time">60.0</b></div>
+        <div><span>COMBO</span><b id="g-combo">—</b></div>
+        <div><span>ACCURACY</span><b id="g-acc">—</b></div>
+      </div>
+      <div class="g-help">☝ AIM WITH INDEX FINGER · 👍 THUMB UP = ARMED · FLICK THUMB DOWN = FIRE · (mouse click / space also fire)</div>
+      <div id="g-targets"></div>
+      <div id="g-over" class="hidden"><div class="g-over-title">ROUND COMPLETE</div><div id="g-over-text"></div></div>
+    </div>
 
     <div class="corner tl"></div><div class="corner tr"></div>
     <div class="corner bl"></div><div class="corner br"></div>

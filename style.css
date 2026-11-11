@@ -141,3 +141,23 @@ html, body {
 #v-said.flash { animation: said-in 0.4s ease-out; }
 @keyframes said-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .tool.disabled { opacity: 0.35; }
+
+/* ---------- target practice ---------- */
+#game { position: absolute; inset: 0; pointer-events: none; }
+.g-hud { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); display: flex; gap: 26px; padding: 8px 18px; border: 1px solid var(--green); background: rgba(0,16,8,0.6); color: var(--green); }
+.g-hud div { text-align: center; } .g-hud span { display: block; font-size: 9px; letter-spacing: 0.2em; opacity: 0.6; } .g-hud b { font-size: 18px; font-weight: 400; letter-spacing: 0.1em; }
+.g-help { position: absolute; left: 50%; top: 122px; transform: translateX(-50%); font-size: 10px; letter-spacing: 0.12em; color: var(--green); opacity: 0.7; white-space: nowrap; }
+body.in-game #voice, body.in-game .hud-left { display: none; }
+.target { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid var(--pink); box-shadow: 0 0 12px rgba(255,61,113,0.5), inset 0 0 14px rgba(255,61,113,0.25); animation: t-in 0.25s ease-out; }
+.target i { position: absolute; inset: 22%; border-radius: 50%; border: 1px solid var(--pink); opacity: 0.8; }
+.target i:nth-child(2) { inset: 42%; } .target i:nth-child(3) { inset: 0; border: 0; background: radial-gradient(circle, var(--pink) 0 8%, transparent 9%); }
+.target.bonus { border-color: var(--amber); box-shadow: 0 0 16px rgba(255,179,0,0.6); } .target.bonus i { border-color: var(--amber); } .target.bonus i:nth-child(3) { background: radial-gradient(circle, var(--amber) 0 8%, transparent 9%); }
+.target.fading { animation: t-fade 0.8s ease-in-out infinite; }
+.target.hit { animation: t-hit 0.35s ease-out forwards; } .target.miss { animation: t-miss 0.3s ease-in forwards; }
+@keyframes t-in { from { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } }
+@keyframes t-fade { 50% { opacity: 0.35; } }
+@keyframes t-hit { to { transform: translate(-50%, -50%) scale(1.8); opacity: 0; border-color: #fff; } }
+@keyframes t-miss { to { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } }
+#g-over { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); text-align: center; padding: 20px 36px; border: 1px solid var(--green); background: rgba(0,16,8,0.8); color: var(--green); font-size: 14px; letter-spacing: 0.15em; line-height: 1.8; }
+.g-over-title { font-size: 22px; letter-spacing: 0.4em; margin-bottom: 6px; }
+#g-over b { color: #fff; font-weight: 400; font-size: 22px; } #g-over span { font-size: 10px; opacity: 0.6; }

@@ -15,13 +15,14 @@ const ROT_SENS = 0.011;
   🖐🖐 open (2 hands)   distance → explode view · twist → roll
   ✌ peace              slice plane follows hand height
 */
-export function createInteraction({ scene, panel, hud, sound, tools }) {
+export function createInteraction({ scene, panel, hud, sound, tools, game }) {
   const st = scene.state;
   let drag = null, zoom = null, dwell = null, grab = null, twoOpen = null, openHold = null, lastHover = null;
   let sliceHold = 0, sliceByHand = false, drawing = false;
   const mouse = { x: -1, y: -1, inside: false };
   let cursor = null, zoomLine = null;
   const modes = { draw: false };
+  const gun = [{ up: false, since: 0 }, { up: false, since: 0 }]; // finger-gun thumb state per hand slot
 
   const release = () => { drag = null; zoom = null; };
   function resetAll() {
@@ -81,8 +82,33 @@ export function createInteraction({ scene, panel, hud, sound, tools }) {
     cursor = { x: p.x, y: p.y, progress: dwell.fired ? 0 : prog, active: true, hover: !!hover };
   }
 
+  // Finger-gun: index pointing, thumb raised = armed; thumb snaps down = fire.
+  function gameUpdate(hands, now) {
+    let aim = null, gestureName = 'NO HAND';
+    for (const h of hands) {
+      const K = h.points, size = dist(K[0], K[9]) || 1;
+      const pointing = h.type === 'point' || h.type === 'peace';
+      if (!pointing) { gun[h.slot].up = false; continue; }
+      const thumbUp = dist(K[4], K[5]) / size > 0.72 && dist(K[4], K[9]) / size > 0.9;
+      const g = gun[h.slot];
+      if (thumbUp && !g.up) { g.up = true; g.since = now; }
+      else if (!thumbUp && g.up) { g.up = false; if (now - g.since < 1500) game.shoot(h.tip); }
+      aim = { x: h.tip.x, y: h.tip.y, armed: g.up }; gestureName = g.up ? 'ARMED' : 'AIM';
+      // let the tool strip still work (to quit)
+      const btn = tools.hitTest(h.tip.x, h.tip.y);
+      if (btn) { if (!dwell || dwell.btn !== btn) dwell = { start: now, origin: { ...h.tip }, fired: false, btn }; const prog = clamp((now - dwell.start) / DWELL_MS, 0, 1); if (prog >= 1 && !dwell.fired) { dwell.fired = true; tools.fire(btn); } tools.setHover(btn, dwell.fired ? 1 : prog); }
+      else { tools.setHover(null); dwell = null; }
+      break;
+    }
+    if (!aim && mouse.inside) aim = { x: mouse.x, y: mouse.y, armed: true };
+    game.setAim(aim);
+    hud.setGesture(gestureName);
+    return { cursor: null, zoomLine: null, hint: null };
+  }
+
   function update(hands, face, now) {
     cursor = null; zoomLine = null;
+    if (game.active) return gameUpdate(hands, now);
     const by = (t) => hands.filter((h) => h.type === t);
     const pinching = by('pinch'), open = by('open'), fists = by('fist'), peace = by('peace');
     const pointing = hands.find((h) => h.type === 'point');
@@ -181,6 +207,7 @@ export function createInteraction({ scene, panel, hud, sound, tools }) {
   });
   window.addEventListener('mousedown', (e) => {
     if (e.target.closest?.('#panel,#landing,#tools')) return;
+    if (game.active) { game.shoot({ x: e.clientX, y: e.clientY }); return; }
     if (modes.draw) { mDraw = true; return; }
     mDrag = { x: e.clientX, y: e.clientY, moved: 0, shift: e.shiftKey };
   });
@@ -202,6 +229,8 @@ export function createInteraction({ scene, panel, hud, sound, tools }) {
     if (e.key === 'ArrowDown' && st.slice !== null) st.slice = clamp(st.slice - 0.1, -1.6, 1.6);
     if (e.key === 'q') st.rotZ -= 0.1; if (e.key === 'w') st.rotZ += 0.1;
     if (e.key === 'd') setMode('draw', !modes.draw);
+    if (e.key === 'g' || e.key === 'G') game.toggle();
+    if (e.key === ' ' && game.active && mouse.inside) { e.preventDefault(); game.shoot({ x: mouse.x, y: mouse.y }); }
   });
 
   return { update, setMode, modes, resetAll };
