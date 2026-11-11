@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { instantiate } from './scene.js';
 
 // Left-hand model library: DOM slots with live 3D minis rendered via scissor viewports.
-export function createLibrary({ scene, container, defs, sound }) {
+export function createLibrary({ scene, container, defs, sound, targets }) {
   const slots = [];
   container.innerHTML = `<div class="lib-title">◈ MODEL LIBRARY <span>${defs.length} UNITS</span></div>`;
   defs.forEach((def, i) => {
@@ -15,10 +15,10 @@ export function createLibrary({ scene, container, defs, sound }) {
     const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 20);
     cam.position.set(0, mini.radius * 0.55, mini.radius * 3.6); cam.lookAt(0, 0, 0);
     slots.push({ def, el, view: el.querySelector('.lib-view'), prog: el.querySelector('.lib-prog div'), mini, sc, cam, spin: 0 });
-    el.addEventListener('click', () => select(i));
+    targets.register(el, () => select(i), { progressEl: el.querySelector('.lib-prog div') });
   });
 
-  let selected = -1, hover = -1;
+  let selected = -1;
   function select(i) {
     if (i === selected) return;
     if (!scene.select(slots[i].def.id)) return;
@@ -27,14 +27,7 @@ export function createLibrary({ scene, container, defs, sound }) {
   }
   scene.onModelChange((def) => { selected = defs.indexOf(def); slots.forEach((s, k) => s.el.classList.toggle('selected', k === selected)); });
 
-  function hitTest(x, y) {
-    for (let i = 0; i < slots.length; i++) { const r = slots[i].el.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i; }
-    return -1;
-  }
-  function setHover(i, progress = 0) {
-    if (i !== hover) { slots.forEach((s, k) => s.el.classList.toggle('hover', k === i)); if (i >= 0) sound.tick(); hover = i; }
-    slots.forEach((s, k) => (s.prog.style.width = k === i ? `${progress * 100}%` : '0%'));
-  }
+  function step(dir) { const n = defs.length; select((((selected < 0 ? 0 : selected) + dir) % n + n) % n); }
 
   function render(dt) {
     const r = scene.renderer, H = window.innerHeight, dpr = r.getPixelRatio();
@@ -42,7 +35,7 @@ export function createLibrary({ scene, container, defs, sound }) {
     for (let i = 0; i < slots.length; i++) {
       const s = slots[i], rect = s.view.getBoundingClientRect();
       if (rect.width < 4) continue;
-      s.spin += dt * (i === selected || i === hover ? 1.6 : 0.5);
+      s.spin += dt * (i === selected || s.el.classList.contains('hover') ? 1.6 : 0.5);
       s.mini.group.rotation.y = s.spin; s.mini.update(dt);
       const x = rect.left * dpr, y = (H - rect.bottom) * dpr, w = rect.width * dpr, h = rect.height * dpr;
       // setViewport/setScissor take CSS px when the renderer manages pixel ratio.
@@ -54,5 +47,5 @@ export function createLibrary({ scene, container, defs, sound }) {
     r.setScissorTest(false);
   }
 
-  return { select, hitTest, setHover, render, get selected() { return selected; } };
+  return { select, step, render, get selected() { return selected; } };
 }

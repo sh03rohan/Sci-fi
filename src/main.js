@@ -7,6 +7,8 @@ import { createPanel } from './panel.js';
 import { createInteraction } from './interaction.js';
 import { createSound } from './sound.js';
 import { createLibrary } from './library.js';
+import { createTargets } from './targets.js';
+import { createToolbar } from './toolbar.js';
 import { makeVideoMapper } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -34,7 +36,8 @@ async function boot() {
   const panel = createPanel();
   const models = await fetch(`${import.meta.env.BASE_URL}data/models.json`).then((r) => r.json());
   scene.loadModels(models, 'globe');
-  const library = createLibrary({ scene, container: $('library'), defs: models, sound });
+  const targets = createTargets(sound);
+  const library = createLibrary({ scene, container: $('library'), defs: models, sound, targets });
   scene.onModelChange((def) => hud.setModel(def.name));
   hud.setModel(scene.current.def.name);
   const nodes = models.reduce((n, m) => n + m.hotspots.length, 0);
@@ -71,12 +74,13 @@ async function boot() {
 
   const toScreen = makeVideoMapper(video);
   const gestures = new GestureEngine(toScreen);
-  const interaction = createInteraction({ scene, panel, hud, sound, library });
+  const interaction = createInteraction({ scene, panel, hud, sound, library, targets });
+  const toolbar = createToolbar({ container: $('toolbar'), targets, interaction, scene, sound });
 
   let last = performance.now();
   let lastResult = { hands: [], face: null };
   let injected = null; // debug: window.__holo.inject({hands,face}) feeds synthetic landmarks
-  window.__holo = { inject: (r) => (injected = r), scene, library };
+  window.__holo = { inject: (r) => (injected = r), scene, library, interaction };
   let handSeen = 0, faceSeen = 0;
 
   function loop() {
@@ -96,11 +100,12 @@ async function boot() {
     hud.setStatus('hand', now - handSeen < 300);
     hud.setStatus('face', now - faceSeen < 500);
 
-    const { cursor, zoomLine } = interaction.update(hands, face, now);
+    const { cursor, zoomLine, hint } = interaction.update(hands, face, now);
+    toolbar.update();
     scene.update(dt);
     library.render(dt);
     panel.update(scene.localToScreen);
-    hud.draw({ hands, face, toScreen, cursor, zoomLine, dt });
+    hud.draw({ hands, face, toScreen, cursor, zoomLine, hint, dt });
   }
   loop();
 }

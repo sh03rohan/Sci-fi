@@ -17,6 +17,7 @@ function classifyRaw(lm) {
 
   if (pinchD < 0.42) return 'pinch';
   if (ext[0] && !ext[1] && !ext[2] && !ext[3]) return 'point';
+  if (ext[0] && ext[1] && !ext[2] && !ext[3]) return 'peace';
   if (extCount === 0) return 'fist';
   if (extCount >= 3) return 'open';
   return 'none';
@@ -42,7 +43,7 @@ export class GestureEngine {
       const h = sorted[i];
       if (!h) {
         slot.tipF.reset(); slot.pinchF.reset(); slot.palmF.reset();
-        slot.type = 'none'; slot.candidate = 'none'; slot.candidateFrames = 0;
+        slot.type = 'none'; slot.candidate = 'none'; slot.candidateFrames = 0; slot.lastPalm = null; slot.lastT = 0;
         continue;
       }
       const lm = h.landmarks;
@@ -58,13 +59,18 @@ export class GestureEngine {
       const pinchS = this.toScreen(pinchMid.x, pinchMid.y);
       const palmS = this.toScreen(lm[MIDDLE_MCP].x, lm[MIDDLE_MCP].y);
 
+      const palm = slot.palmF.filter(palmS, now);
+      // palm velocity (px/s) for swipes
+      const dtv = slot.lastT ? Math.max((now - slot.lastT) / 1000, 1e-3) : 1;
+      const vel = slot.lastPalm ? { x: (palm.x - slot.lastPalm.x) / dtv, y: (palm.y - slot.lastPalm.y) / dtv } : { x: 0, y: 0 };
+      slot.lastPalm = palm; slot.lastT = now;
       out.push({
         slot: i,
         label: h.label,
         type: slot.type,
         tip: slot.tipF.filter(tipS, now),
         pinch: slot.pinchF.filter(pinchS, now),
-        palm: slot.palmF.filter(palmS, now),
+        palm, vel,
         points: lm.map((p) => this.toScreen(p.x, p.y)), // raw, for drawing
       });
     }

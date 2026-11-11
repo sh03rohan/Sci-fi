@@ -70,9 +70,22 @@ export function createScene(canvas) {
   const rippleGeo = new THREE.RingGeometry(0.9, 1, 48);
 
   const state = {
-    rotX: 0.15, rotY: 0, velX: 0, velY: 0, scale: 1, targetScale: 1, tiltLimit: 1.2,
+    rotX: 0.15, rotY: 0, rotZ: 0, velX: 0, velY: 0, scale: 1, targetScale: 1, tiltLimit: 1.2,
     autoSpin: true, parallax: { x: 0, y: 0 }, pTarget: { x: 0, y: 0 }, hover: null, stageScale: 1,
+    explode: 0, targetExplode: 0,           // 0..1 parts pushed outward
+    slice: null,                            // null or world-space Y height of the cut
+    offset: { x: 0, y: 0 }, targetOffset: { x: 0, y: 0 }, // grab & drag position
   };
+  const HOME = { x: 1.05, y: 0 };
+  renderer.localClippingEnabled = true;
+  const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+  // slice indicator: a flat square outline at the cut height
+  const sliceRing = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.6, 0, -1.6), new THREE.Vector3(1.6, 0, -1.6), new THREE.Vector3(1.6, 0, 1.6), new THREE.Vector3(-1.6, 0, 1.6)]), new THREE.LineBasicMaterial({ color: PINK, transparent: true, opacity: 0.8 }));
+  sliceRing.visible = false; root.add(sliceRing);
+  // annotation strokes (air-draw)
+  const strokes = []; let stroke = null;
+  const strokeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false });
+  const _parts = { list: [] };
   const listeners = [];
 
   function mount(def) {
@@ -83,6 +96,24 @@ export function createScene(canvas) {
     holder.add(hitSphere);
     atmo.visible = def.id === 'globe';
     state.tiltLimit = current.tiltLimit ?? 1.2;
+    state.explode = 0; state.targetExplode = 0; clearStrokes();
+    // explode parts: every direct child of the model group, pushed away from the model centre
+    const box = new THREE.Box3().setFromObject(current.group); const centre = box.getCenter(new THREE.Vector3()); current.group.worldToLocal(centre);
+    const hotGroups = new Set(current.hotspots.map((h) => h.group));
+    const centred = def.id === 'globe' || def.id === 'galaxy'; // concentric models: shells scale instead of flying apart
+    let shell = 0;
+    _parts.list = current.group.children.map((c, i) => {
+      if (hotGroups.has(c)) {
+        // nodes drift outward a little so they stay on the expanded surface
+        const d = c.position.clone().sub(centre); const len = d.length() || 1;
+        return { obj: c, pos0: c.position.clone(), scale0: c.scale.clone(), dir: d.normalize().multiplyScalar(centred ? len * 0.22 : 0.35 + len * 0.6), k: 1 };
+      }
+      const b = new THREE.Box3().setFromObject(c); const cc = b.isEmpty() ? new THREE.Vector3() : b.getCenter(new THREE.Vector3()); current.group.worldToLocal(cc);
+      const dir = cc.clone().sub(centre); const radial = !centred && dir.length() > 0.05;
+      if (!radial) { shell++; return { obj: c, pos0: c.position.clone(), scale0: c.scale.clone(), dir: null, k: 0.4 + (shell % 4) * 0.35 }; }
+      return { obj: c, pos0: c.position.clone(), scale0: c.scale.clone(), dir: dir.normalize().multiplyScalar(0.35 + dir.length() * 0.6), k: 1 };
+    });
+    current.group.traverse((o) => { if (o.material) { for (const m of [].concat(o.material)) { m.clippingPlanes = [clipPlane]; m.clipShadows = false; } } });
     state.rotX = clamp(state.rotX, -state.tiltLimit, state.tiltLimit);
     for (const fn of listeners) fn(def);
   }
@@ -102,6 +133,21 @@ export function createScene(canvas) {
     }
   }
 
+  function clearStrokes() { for (const l of strokes) { holder.remove(l); l.geometry.dispose(); } strokes.length = 0; stroke = null; }
+  function endStroke() { stroke = null; }
+  // Adds a point (holder-local) to the current stroke, starting a new one if needed.
+  function drawPoint(local) {
+    const p = local.clone().multiplyScalar(1.015);
+    if (!stroke) {
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3000 * 3), 3)); geo.setDrawRange(0, 0);
+      stroke = new THREE.Line(geo, strokeMat.clone()); stroke.userData.n = 0; holder.add(stroke); strokes.push(stroke);
+    }
+    const n = stroke.userData.n; if (n >= 3000) { stroke = null; return drawPoint(local); }
+    if (n > 0) { const a = stroke.geometry.attributes.position; const lx = a.getX(n - 1), ly = a.getY(n - 1), lz = a.getZ(n - 1); if (Math.hypot(lx - p.x, ly - p.y, lz - p.z) < 0.01) return; }
+    stroke.geometry.attributes.position.setXYZ(n, p.x, p.y, p.z); stroke.geometry.attributes.position.needsUpdate = true;
+    stroke.userData.n = n + 1; stroke.geometry.setDrawRange(0, n + 1); stroke.geometry.computeBoundingSphere();
+  }
+  function setSlice(worldY) { state.slice = worldY; }
   const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function raycast(sx, sy) {
     if (!current || transition) return null;
@@ -144,9 +190,21 @@ export function createScene(canvas) {
     state.rotY += state.velY * dt; state.rotX += state.velX * dt;
     state.rotX = clamp(state.rotX, -state.tiltLimit, state.tiltLimit);
     if (!state.autoSpin) { state.velX *= Math.pow(0.08, dt); state.velY *= Math.pow(0.08, dt); }
-    holder.rotation.set(state.rotX, state.rotY, 0);
+    holder.rotation.set(state.rotX, state.rotY, state.rotZ);
     state.scale = lerp(state.scale, state.targetScale, 1 - Math.pow(0.001, dt));
     root.scale.setScalar(state.scale);
+    state.offset.x = lerp(state.offset.x, state.targetOffset.x, 1 - Math.pow(0.0005, dt));
+    state.offset.y = lerp(state.offset.y, state.targetOffset.y, 1 - Math.pow(0.0005, dt));
+    root.position.set(HOME.x + state.offset.x, HOME.y + state.offset.y, 0);
+    // explode
+    state.explode = lerp(state.explode, state.targetExplode, 1 - Math.pow(0.002, dt));
+    for (const p of _parts.list) {
+      if (p.dir) p.obj.position.copy(p.pos0).addScaledVector(p.dir, state.explode * 1.6);
+      else p.obj.scale.copy(p.scale0).multiplyScalar(1 + state.explode * 0.3 * p.k);
+    }
+    // slice plane (world space, clips everything above the cut)
+    if (state.slice === null) { clipPlane.constant = 1e6; sliceRing.visible = false; }
+    else { clipPlane.constant = state.slice; sliceRing.visible = true; sliceRing.position.y = (state.slice - root.position.y) / state.scale; sliceRing.material.opacity = 0.5 + Math.sin(t * 6) * 0.3; }
 
     ringGroup.rotation.y += dt * 0.25; base2.rotation.y -= dt * 0.4;
     glow.material.opacity = 0.75 + Math.sin(t * 2) * 0.1;
@@ -167,7 +225,7 @@ export function createScene(canvas) {
     state.parallax.x = lerp(state.parallax.x, state.pTarget.x, 1 - Math.pow(0.01, dt));
     state.parallax.y = lerp(state.parallax.y, state.pTarget.y, 1 - Math.pow(0.01, dt));
     camera.position.x = state.parallax.x * 0.35; camera.position.y = state.parallax.y * 0.25;
-    camera.lookAt(root.position.x * 0.45, 0, 0);
+    camera.lookAt(HOME.x * 0.45, 0, 0);
 
     renderer.setScissorTest(false);
     renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
@@ -175,7 +233,8 @@ export function createScene(canvas) {
   }
 
   return {
-    state, renderer, loadModels, select, onModelChange, raycast, localToScreen, pulse, update, resize,
+    state, renderer, camera, loadModels, select, onModelChange, raycast, localToScreen, pulse, update, resize,
+    drawPoint, endStroke, clearStrokes, setSlice, HOME,
     get current() { return current; }, get defs() { return defs; }, get busy() { return !!transition; },
   };
 }

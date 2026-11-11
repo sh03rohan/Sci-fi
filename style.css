@@ -154,3 +154,19 @@ html, body {
 .meter { display: block; width: 100px; height: 5px; background: rgba(255,255,255,0.08); position: relative; }
 .meter em { display: block; height: 100%; width: 0; background: var(--green); box-shadow: 0 0 6px var(--green); transition: width 0.08s linear; }
 .meter.pink em { background: var(--pink); box-shadow: 0 0 6px var(--pink); }
+
+
+/* ---------- toolbar ---------- */
+#toolbar { position: absolute; right: 22px; top: 310px; width: 210px; pointer-events: auto; }
+.tb-title { font-size: 11px; letter-spacing: 0.2em; margin-bottom: 6px; opacity: 0.85; }
+.tb-btn {
+  position: relative; display: flex; align-items: center; height: 34px; margin-bottom: 6px; padding: 0 12px;
+  border: 1px solid rgba(0,229,255,0.25); background: rgba(0,10,16,0.35); font-size: 11px; letter-spacing: 0.15em; cursor: pointer; overflow: hidden;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.tb-btn.hover { border-color: var(--cyan); background: rgba(0,229,255,0.08); transform: translateX(-4px); }
+.tb-btn.active { border-color: var(--amber); color: var(--amber); box-shadow: 0 0 12px rgba(255,179,0,0.3), inset 0 0 16px rgba(255,179,0,0.08); }
+.tb-btn.flash { background: rgba(255,255,255,0.25); }
+.tb-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; }
+.tb-prog div { height: 100%; width: 0; background: #fff; box-shadow: 0 0 8px #fff; }
+.hud-hint { font-size: 10px; }

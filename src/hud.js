@@ -46,7 +46,7 @@ export function createHUD(canvas) {
 
   /* ------------ HAND ------------ */
   function drawHand(h) {
-    const col = h.type === 'pinch' ? AMBER : h.type === 'fist' ? PINK : GREEN;
+    const col = h.type === 'pinch' ? AMBER : h.type === 'fist' ? PINK : h.type === 'open' ? WHITE : h.type === 'peace' ? CYAN : GREEN;
     const P = h.points;
     ctx.save(); glowStroke(col, 1.6, 10, 0.85);
     ctx.beginPath(); for (const [a, b] of HAND_CONNECTIONS) { ctx.moveTo(P[a].x, P[a].y); ctx.lineTo(P[b].x, P[b].y); } ctx.stroke();
@@ -143,7 +143,16 @@ export function createHUD(canvas) {
     ctx.restore();
   }
 
-  function draw({ hands, face, toScreen, cursor, zoomLine, dt }) {
+  function drawHint(h) {
+    // floating label near the palm for grab / reset / slice
+    ctx.save(); glowStroke(AMBER, 1.5, 8, 0.9);
+    ctx.beginPath(); ctx.arc(h.x, h.y, 30, 0, Math.PI * 2); ctx.globalAlpha = 0.35; ctx.stroke();
+    if (h.progress) { ctx.globalAlpha = 1; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(h.x, h.y, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * h.progress); ctx.stroke(); }
+    ctx.globalAlpha = 1; text(h.label, h.x, h.y - 40, AMBER, 11, 'center');
+    ctx.restore();
+  }
+
+  function draw({ hands, face, toScreen, cursor, zoomLine, hint, dt }) {
     t += dt || 0.016;
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     let m = null;
@@ -156,6 +165,7 @@ export function createHUD(canvas) {
       ctx.restore();
     }
     if (cursor) drawCursor(cursor);
+    if (hint) drawHint(hint);
 
     // Biometrics panel
     if (m) {
@@ -177,5 +187,7 @@ export function createHUD(canvas) {
   const setRot = (x, y) => { const d = (r) => String(Math.round(((r * 180) / Math.PI) % 360 + 360) % 360).padStart(3, '0'); el.rot.textContent = `X ${d(x)}° Y ${d(y)}°`; };
   const setZoom = (s) => (el.zoom.textContent = `${s.toFixed(2)}x`);
   const setModel = (name) => (el.model.textContent = name);
-  return { draw, setStatus, setGesture, setRot, setZoom, setModel };
+  const exEl = $('g-explode');
+  const setExplode = (v) => { if (exEl) exEl.textContent = `${Math.round(v * 100)}%`; };
+  return { draw, setStatus, setGesture, setRot, setZoom, setModel, setExplode };
 }

@@ -17,11 +17,17 @@ export function edges(geo, opacity = 0.6, color = CYAN, threshold = 1) {
 export function fresnelSphere(r, color, power, strength, side = THREE.FrontSide) {
   const mat = new THREE.ShaderMaterial({
     uniforms: { uColor: { value: color }, uPower: { value: power }, uStrength: { value: strength } },
-    vertexShader: `varying vec3 vN; varying vec3 vV;
-      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
-    fragmentShader: `uniform vec3 uColor; uniform float uPower; uniform float uStrength; varying vec3 vN; varying vec3 vV;
-      void main(){ float f = pow(1.0 - abs(dot(vN, vV)), uPower); gl_FragColor = vec4(uColor, f*uStrength + 0.02); }`,
-    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side,
+    vertexShader: `#include <clipping_planes_pars_vertex>
+      varying vec3 vN; varying vec3 vV;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv;
+        #include <clipping_planes_vertex>
+      }`,
+    fragmentShader: `#include <clipping_planes_pars_fragment>
+      uniform vec3 uColor; uniform float uPower; uniform float uStrength; varying vec3 vN; varying vec3 vV;
+      void main(){
+        #include <clipping_planes_fragment>
+        float f = pow(1.0 - abs(dot(vN, vV)), uPower); gl_FragColor = vec4(uColor, f*uStrength + 0.02); }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side, clipping: true,
   });
   return new THREE.Mesh(new THREE.SphereGeometry(r, 48, 48), mat);
 }
