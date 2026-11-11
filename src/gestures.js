@@ -17,7 +17,6 @@ function classifyRaw(lm) {
 
   if (pinchD < 0.42) return 'pinch';
   if (ext[0] && !ext[1] && !ext[2] && !ext[3]) return 'point';
-  if (ext[0] && ext[1] && !ext[2] && !ext[3]) return 'peace';
   if (extCount === 0) return 'fist';
   if (extCount >= 3) return 'open';
   return 'none';
@@ -27,7 +26,7 @@ function classifyRaw(lm) {
 export class GestureEngine {
   constructor(toScreen) {
     this.toScreen = toScreen;
-    this.slots = [0, 1, 2, 3].map(() => ({
+    this.slots = [0, 1].map(() => ({
       tipF: new OneEuro2(1.0, 0.015), pinchF: new OneEuro2(1.0, 0.015), palmF: new OneEuro2(0.8, 0.01),
       type: 'none', candidate: 'none', candidateFrames: 0,
     }));
@@ -38,12 +37,12 @@ export class GestureEngine {
     const out = [];
     // Keep slot assignment stable: sort by wrist x so left-most hand is slot 0.
     const sorted = [...hands].sort((a, b) => b.landmarks[WRIST].x - a.landmarks[WRIST].x);
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       const slot = this.slots[i];
       const h = sorted[i];
       if (!h) {
         slot.tipF.reset(); slot.pinchF.reset(); slot.palmF.reset();
-        slot.type = 'none'; slot.candidate = 'none'; slot.candidateFrames = 0; slot.lastPalm = null; slot.lastT = 0;
+        slot.type = 'none'; slot.candidate = 'none'; slot.candidateFrames = 0;
         continue;
       }
       const lm = h.landmarks;
@@ -59,18 +58,13 @@ export class GestureEngine {
       const pinchS = this.toScreen(pinchMid.x, pinchMid.y);
       const palmS = this.toScreen(lm[MIDDLE_MCP].x, lm[MIDDLE_MCP].y);
 
-      const palm = slot.palmF.filter(palmS, now);
-      // palm velocity (px/s) for swipes
-      const dtv = slot.lastT ? Math.max((now - slot.lastT) / 1000, 1e-3) : 1;
-      const vel = slot.lastPalm ? { x: (palm.x - slot.lastPalm.x) / dtv, y: (palm.y - slot.lastPalm.y) / dtv } : { x: 0, y: 0 };
-      slot.lastPalm = palm; slot.lastT = now;
       out.push({
         slot: i,
         label: h.label,
         type: slot.type,
         tip: slot.tipF.filter(tipS, now),
         pinch: slot.pinchF.filter(pinchS, now),
-        palm, vel,
+        palm: slot.palmF.filter(palmS, now),
         points: lm.map((p) => this.toScreen(p.x, p.y)), // raw, for drawing
       });
     }
